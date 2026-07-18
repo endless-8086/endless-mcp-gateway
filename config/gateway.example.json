@@ -1,0 +1,31 @@
+{
+  "nodeEnv": "development",
+  "http": {
+    "host": "0.0.0.0",
+    "port": 8080
+  },
+  "database": {
+    "url": "postgres://<user>:<password>@<host>:5432/mcp-gateway",
+    "poolMax": 20,
+    "idleTimeoutMs": 30000,
+    "connectionTimeoutMs": 5000,
+    "maxUses": 0
+  },
+  "security": {
+    "adminToken": "change-me",
+    "mcpToken": "",
+    "upgradeInsecureRequests": false,
+    "allowedStdioCommands": [],
+    "allowedUpstreamHosts": [],
+    "allowPrivateUpstreams": true
+  },
+  "runtime": {
+    "logLevel": "info",
+    "refreshIntervalMs": 60000,
+    "defaultCallTimeoutMs": 30000,
+    "maxBodyBytes": 1048576,
+    "maxToolConcurrency": 8,
+    "maxRestarts": 10,
+    "restartBackoffMs": 1000
+  }
+}

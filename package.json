@@ -1,0 +1,36 @@
+{
+  "name": "endless-mcp-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP gateway for stdio, SSE and Streamable HTTP upstream servers",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node node_modules/tsx/dist/cli.mjs watch src/main.ts",
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "test": "node node_modules/tsx/dist/cli.mjs --test test/connector.test.ts test/gateway-http.test.ts test/static-ui.test.ts test/pagination.test.ts",
+    "db:migrate": "node node_modules/tsx/dist/cli.mjs src/db/migrate.ts",
+    "db:rollback": "node node_modules/tsx/dist/cli.mjs src/db/migrate.ts rollback",
+    "db:smoke": "node node_modules/tsx/dist/cli.mjs scripts/db-smoke.ts",
+    "lint": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "@fastify/cors": "^10.1.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/rate-limit": "^10.2.2",
+    "fastify": "^5.4.0",
+    "pg": "^8.16.3",
+    "pino": "^9.7.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "@types/pg": "^8.15.4",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mcp_gateway
+      POSTGRES_USER: mcp_gateway
+      POSTGRES_PASSWORD: mcp_gateway
+    ports:
+      - "5432:5432"
+    volumes:
+      - mcp_gateway_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcp_gateway -d mcp_gateway"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mcp_gateway_pgdata:
