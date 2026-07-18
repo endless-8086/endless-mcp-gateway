@@ -4,11 +4,14 @@ const state = {
   tags: [],
   toolPage: 1,
   toolPageSize: 20,
+  toolTagFilter: '',
+  toolServerFilter: '',
   toolTotal: 0,
   toolTotalPages: 1,
   serverFilter: 'all',
   editingServer: null,
-  editingTool: null
+  editingTool: null,
+  editingTag: null
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -16,7 +19,11 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const __ = (key, subs) => window.__ ? window.__(key, subs) : key;
 
-window.addEventListener('i18n-changed', () => { renderAll(); showView(document.querySelector('.nav-item.active')?.dataset?.view || 'overview'); });
+window.addEventListener('i18n-changed', () => {
+  renderAll();
+  showView(document.querySelector('.nav-item.active')?.dataset?.view || 'overview');
+  setTokenVisibility($('#token-input')?.type === 'text');
+});
 
 
 function esc(value) {
@@ -67,12 +74,34 @@ function formatDate(value) {
 function toolListUrl() {
   const params = new URLSearchParams({ includeDisabled: 'true', paginate: 'true', page: String(state.toolPage), pageSize: String(state.toolPageSize) });
   const search = ($('#tool-search')?.value || '').trim();
-  const tag = $('#tool-tag-filter')?.value || '';
-  const serverId = $('#tool-server-filter')?.value || '';
+  const tag = state.toolTagFilter;
+  const serverId = state.toolServerFilter;
   if (search) params.set('search', search);
   if (tag) params.set('tag', tag);
   if (serverId) params.set('serverId', serverId);
   return `/api/v1/tools?${params.toString()}`;
+}
+
+function filterSelectMarkup(key, options, selected, className = '') {
+  const selectedOption = options.find((option) => option.value === selected) ?? options[0];
+  return `<div class="filter-select ${className}" data-filter-select="${key}"><button class="filter-select-trigger" type="button" data-filter-select-trigger="${key}" aria-haspopup="listbox" aria-expanded="false"><span>${esc(selectedOption.label)}</span><span class="filter-select-chevron" aria-hidden="true"></span></button><div class="filter-select-menu" role="listbox" hidden>${options.map((option) => `<button class="filter-select-option" type="button" role="option" data-filter-select-option="${key}" data-filter-value="${esc(option.value)}" aria-selected="${option.value === selected}">${esc(option.label)}</button>`).join('')}</div></div>`;
+}
+
+function renderToolFilters() {
+  const tagOptions = [{ value: '', label: __('filter_all_tags') }, ...state.tags.filter((tag) => tag.enabled).map((tag) => ({ value: tag.name, label: tag.displayName || tag.name }))];
+  const serverOptions = [{ value: '', label: __('filter_all_servers') }, ...state.servers.map((server) => ({ value: server.id, label: server.name }))];
+  if (!tagOptions.some((option) => option.value === state.toolTagFilter)) state.toolTagFilter = '';
+  if (!serverOptions.some((option) => option.value === state.toolServerFilter)) state.toolServerFilter = '';
+  $('#tool-tag-filter').innerHTML = filterSelectMarkup('tag', tagOptions, state.toolTagFilter);
+  $('#tool-server-filter').innerHTML = filterSelectMarkup('server', serverOptions, state.toolServerFilter);
+}
+
+function closeFilterSelects(except) {
+  $$('.filter-select').forEach((select) => {
+    if (select === except) return;
+    select.querySelector('.filter-select-menu').hidden = true;
+    select.querySelector('.filter-select-trigger').setAttribute('aria-expanded', 'false');
+  });
 }
 
 async function loadAll(showMessage = false) {
@@ -97,6 +126,7 @@ async function loadAll(showMessage = false) {
 }
 
 function renderAll() {
+  renderEndpointUrls();
   renderOverview();
   renderServers();
   renderTools();
@@ -130,31 +160,29 @@ function renderServers() {
 
 function renderTools() {
   const filtered = state.tools;
-  const tagSelect = $('#tool-tag-filter');
-  const currentTag = tagSelect.value;
-  tagSelect.innerHTML = `<option value="">${__('filter_all_tags')}</option>` + state.tags.filter((item) => item.enabled).map((item) => `<option value="${esc(item.name)}">${esc(item.displayName || item.name)}</option>`).join('');
-  tagSelect.value = currentTag;
-  const serverSelect = $('#tool-server-filter');
-  const currentServer = serverSelect.value;
-  serverSelect.innerHTML = `<option value="">${__('filter_all_servers')}</option>` + state.servers.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('');
-  serverSelect.value = currentServer;
+  renderToolFilters();
   if (!filtered.length) { $('#tools-table').innerHTML = `<div class="empty-state"><strong>${__('tools_empty_title')}</strong>${__('tools_empty_desc')}</div>`; return; }
   const from = state.toolTotal ? (state.toolPage - 1) * state.toolPageSize + 1 : 0;
   const to = Math.min(state.toolTotal, state.toolPage * state.toolPageSize);
-  $('#tools-table').innerHTML = `<div class="table-scroll"><table class="data-table"><thead><tr><th>${__('table_tool')}</th><th>${__('table_server')}</th><th>${__('table_tags')}</th><th>${__('table_status')}</th><th>${__('table_params')}</th><th></th></tr></thead><tbody>${filtered.map((tool) => `<tr><td class="primary-cell">${esc(tool.displayName || tool.exposedName)}<span class="sub-cell">${esc(tool.exposedName)}${tool.descriptionOverride || tool.upstreamDescription ? ` · ${esc(tool.descriptionOverride || tool.upstreamDescription).slice(0, 40)}` : ''}</span></td><td>${esc(state.servers.find((server) => server.id === tool.serverId)?.name || tool.serverId)}</td><td>${tool.tags.length ? tool.tags.map((item) => `<span class="tag-chip">#${esc(item)}</span>`).join(' ') : `<span class="tag-chip muted-chip">${__('no_category')}</span>`}</td><td><span class="status-badge status-${tool.enabled && !tool.orphaned ? 'ready' : 'disabled'}">${tool.orphaned ? __('status_orphaned') : tool.enabled ? __('status_enabled') : __('status_disabled')}</span></td><td>${Object.keys(tool.inputSchema || {}).length ? __('params_schema') : __('no_params')}</td><td><div class="actions-cell"><button class="table-button" data-tool-action="edit" data-server-id="${esc(tool.serverId)}" data-tool-name="${esc(tool.upstreamName)}">${__('btn_edit')}</button><button class="table-button" data-tool-action="toggle" data-server-id="${esc(tool.serverId)}" data-tool-name="${esc(tool.upstreamName)}">${tool.enabled ? __('btn_disable') : __('btn_enable')}</button></div></td></tr>`).join('')}</tbody></table></div><div class="pagination-bar"><span>${__('pagination_range', {0: from, 1: to, 2: state.toolTotal})}</span><div class="pagination-controls"><select id="tool-page-size" class="select-control" aria-label="Page size"><option value="20" ${state.toolPageSize === 20 ? 'selected' : ''}>${__('page_size', {0: 20})}</option><option value="50" ${state.toolPageSize === 50 ? 'selected' : ''}>${__('page_size', {0: 50})}</option><option value="100" ${state.toolPageSize === 100 ? 'selected' : ''}>${__('page_size', {0: 100})}</option></select><button class="table-button" data-tool-page="prev" ${state.toolPage <= 1 ? 'disabled' : ''}>${__('pagination_prev')}</button><span>${__('pagination_page', {0: state.toolPage, 1: state.toolTotalPages})}</span><button class="table-button" data-tool-page="next" ${state.toolPage >= state.toolTotalPages ? 'disabled' : ''}>${__('pagination_next')}</button></div></div>`;
+  const pageSizeOptions = [20, 50, 100].map((value) => ({ value: String(value), label: __('page_size', {0: value}) }));
+  $('#tools-table').innerHTML = `<div class="table-scroll"><table class="data-table"><thead><tr><th>${__('table_tool')}</th><th>${__('table_server')}</th><th>${__('table_tags')}</th><th>${__('table_status')}</th><th>${__('table_params')}</th><th></th></tr></thead><tbody>${filtered.map((tool) => `<tr><td class="primary-cell">${esc(tool.displayName || tool.exposedName)}<span class="sub-cell">${esc(tool.exposedName)}${tool.descriptionOverride || tool.upstreamDescription ? ` · ${esc(tool.descriptionOverride || tool.upstreamDescription).slice(0, 40)}` : ''}</span></td><td>${esc(state.servers.find((server) => server.id === tool.serverId)?.name || tool.serverId)}</td><td>${tool.tags.length ? tool.tags.map((item) => `<span class="tag-chip">#${esc(item)}</span>`).join(' ') : `<span class="tag-chip muted-chip">${__('no_category')}</span>`}</td><td><span class="status-badge status-${tool.enabled && !tool.orphaned ? 'ready' : 'disabled'}">${tool.orphaned ? __('status_orphaned') : tool.enabled ? __('status_enabled') : __('status_disabled')}</span></td><td>${Object.keys(tool.inputSchema || {}).length ? __('params_schema') : __('no_params')}</td><td><div class="actions-cell"><button class="table-button" data-tool-action="edit" data-server-id="${esc(tool.serverId)}" data-tool-name="${esc(tool.upstreamName)}">${__('btn_edit')}</button><button class="table-button" data-tool-action="toggle" data-server-id="${esc(tool.serverId)}" data-tool-name="${esc(tool.upstreamName)}">${tool.enabled ? __('btn_disable') : __('btn_enable')}</button></div></td></tr>`).join('')}</tbody></table></div><div class="pagination-bar"><span>${__('pagination_range', {0: from, 1: to, 2: state.toolTotal})}</span><div class="pagination-controls">${filterSelectMarkup('page-size', pageSizeOptions, String(state.toolPageSize), 'pagination-select')}<button class="table-button" data-tool-page="prev" ${state.toolPage <= 1 ? 'disabled' : ''}>${__('pagination_prev')}</button><span>${__('pagination_page', {0: state.toolPage, 1: state.toolTotalPages})}</span><button class="table-button" data-tool-page="next" ${state.toolPage >= state.toolTotalPages ? 'disabled' : ''}>${__('pagination_next')}</button></div></div>`;
 }
 
 function renderTags() {
   const countByTag = new Map(state.tags.map((tag) => [tag.name, state.tools.filter((tool) => tool.tags.includes(tag.name)).length]));
   $('#tag-summary').textContent = __('tags_summary', {0: state.tags.length, 1: state.tools.filter((tool) => tool.tags.length).length});
-  $('#tags-grid').innerHTML = state.tags.length ? state.tags.map((tag) => `<article class="tag-card"><div class="tag-card-top"><h3><span class="tag-chip">#${esc(tag.name)}</span></h3><button class="table-button danger" data-tag-action="delete" data-tag-name="${esc(tag.name)}">${__('btn_delete')}</button></div><p>${esc(tag.description || __('tags_no_desc'))}</p><div class="tag-card-footer"><span>${esc(tag.displayName || tag.name)}</span><span>${__('tags_count', {0: countByTag.get(tag.name) || 0})}</span></div></article>`).join('') : `<div class="empty-state"><strong>${__('tags_empty_title')}</strong>${__('tags_empty_desc')}</div>`;
+  $('#tags-grid').innerHTML = state.tags.length ? state.tags.map((tag) => `<article class="tag-card"><div class="tag-card-top"><h3><span class="tag-chip">#${esc(tag.name)}</span></h3><div class="actions-cell"><button class="table-button" data-tag-action="edit" data-tag-name="${esc(tag.name)}">${__('btn_edit')}</button><button class="table-button danger" data-tag-action="delete" data-tag-name="${esc(tag.name)}">${__('btn_delete')}</button></div></div><p>${esc(tag.description || __('tags_no_desc'))}</p><div class="tag-card-footer"><span>${esc(tag.displayName || tag.name)}</span><span>${__('tags_count', {0: countByTag.get(tag.name) || 0})}</span></div></article>`).join('') : `<div class="empty-state"><strong>${__('tags_empty_title')}</strong>${__('tags_empty_desc')}</div>`;
 }
 
 function showView(view) {
   $$('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.view === view));
   $$('.view').forEach((item) => item.classList.toggle('active-view', item.id === `view-${view}`));
-  const titles = { overview: __('page_overview'), servers: __('page_servers'), tools: __('page_tools'), tags: __('page_tags') };
-  $('#page-title').textContent = titles[view] || __('page_overview');
+}
+
+function renderEndpointUrls() {
+  $$('[data-endpoint-path]').forEach((element) => {
+    element.textContent = `${window.location.origin}${element.dataset.endpointPath}`;
+  });
 }
 
 function serverDialog(server = null) {
@@ -164,7 +192,7 @@ function serverDialog(server = null) {
   form.reset();
   $('#server-dialog-title').textContent = server ? __('dialog_edit_server', {0: server.name}) : __('dialog_add_server');
   if (server) {
-    for (const [key, value] of Object.entries({ id: server.id, name: server.name, type: server.type, enabled: String(server.enabled), command: server.command || '', args: JSON.stringify(server.args || []), cwd: server.cwd || '', url: server.url || '', headers: JSON.stringify(server.headers || {}) })) {
+    for (const [key, value] of Object.entries({ id: server.id, name: server.name, type: server.type, enabled: String(server.enabled), timeoutMs: server.timeoutMs ?? '', command: server.command || '', args: JSON.stringify(server.args || []), cwd: server.cwd || '', url: server.url || '', headers: JSON.stringify(server.headers || {}) })) {
       if (form.elements[key]) form.elements[key].value = value;
     }
     form.elements.id.readOnly = true;
@@ -192,6 +220,17 @@ function toolDialog(tool) {
   $('#tool-dialog').showModal();
 }
 
+function tagDialog(tag) {
+  state.editingTag = tag;
+  const form = $('#tag-edit-form');
+  form.reset();
+  $('#tag-edit-dialog-title').textContent = __('dialog_edit_tag', {0: tag.name});
+  $('#tag-edit-name').textContent = tag.name;
+  form.elements.displayName.value = tag.displayName || '';
+  form.elements.description.value = tag.description || '';
+  $('#tag-edit-dialog').showModal();
+}
+
 async function handleServerAction(action, serverId) {
   const server = state.servers.find((item) => item.id === serverId);
   if (!server) return;
@@ -209,7 +248,7 @@ async function handleToolAction(action, serverId, toolName) {
   if (!tool) return;
   try {
     if (action === 'edit') { toolDialog(tool); return; }
-    const updated = await api(`/api/v1/servers/${encodeURIComponent(serverId)}/tools/${encodeURIComponent(toolName)}`, { method: 'PUT', body: JSON.stringify({ enabled: !tool.enabled, version: tool.version }) });
+    const updated = await api(`/api/v1/servers/${encodeURIComponent(serverId)}/tools/${encodeURIComponent(toolName)}`, { method: 'PUT', body: JSON.stringify({ enabled: !tool.enabled }) });
     const idx = state.tools.findIndex(t => t.serverId === serverId && t.upstreamName === toolName);
     if (idx >= 0 && updated) state.tools[idx] = { ...state.tools[idx], ...updated };
     renderAll();
@@ -218,12 +257,43 @@ async function handleToolAction(action, serverId, toolName) {
 
 $('#token-input').value = token();
 $('#save-token').addEventListener('click', () => { localStorage.setItem('mcp-admin-token', $('#token-input').value.trim()); toast(__('toast_token_saved')); loadAll(); });
+const tokenInput = $('#token-input');
+const tokenVisibility = $('#toggle-token-visibility');
+function setTokenVisibility(visible) {
+  tokenInput.type = visible ? 'text' : 'password';
+  tokenVisibility.classList.toggle('is-visible', visible);
+  tokenVisibility.setAttribute('aria-pressed', String(visible));
+  const label = __(visible ? 'token_hide' : 'token_show');
+  tokenVisibility.setAttribute('aria-label', label);
+  tokenVisibility.title = label;
+}
+tokenVisibility.addEventListener('click', () => setTokenVisibility(tokenInput.type === 'password'));
 $('#refresh-all').addEventListener('click', () => loadAll(true));
 $('#refresh-tools').addEventListener('click', async () => { try { await Promise.all(state.servers.filter((server) => server.enabled).map((server) => api(`/api/v1/servers/${encodeURIComponent(server.id)}/refresh`, { method: 'POST' }))); await loadAll(); toast(__('toast_all_refreshed')); } catch (error) { toast(error.message, true); } });
-$('#theme-toggle').addEventListener('click', () => { document.body.classList.toggle('light'); localStorage.setItem('mcp-theme', document.body.classList.contains('light') ? 'light' : 'dark'); });
-if (localStorage.getItem('mcp-theme') !== 'dark') document.body.classList.add('light');
-
 document.addEventListener('click', (event) => {
+  const filterTrigger = event.target.closest('[data-filter-select-trigger]');
+  if (filterTrigger) {
+    const select = filterTrigger.closest('[data-filter-select]');
+    const menu = select.querySelector('.filter-select-menu');
+    const willOpen = menu.hidden;
+    closeFilterSelects(select);
+    menu.hidden = !willOpen;
+    filterTrigger.setAttribute('aria-expanded', String(willOpen));
+    return;
+  }
+  const filterOption = event.target.closest('[data-filter-select-option]');
+  if (filterOption) {
+    const key = filterOption.dataset.filterSelectOption;
+    const value = filterOption.dataset.filterValue || '';
+    if (key === 'tag') state.toolTagFilter = value;
+    if (key === 'server') state.toolServerFilter = value;
+    if (key === 'page-size') state.toolPageSize = Number(value) || 20;
+    closeFilterSelects();
+    state.toolPage = 1;
+    loadAll();
+    return;
+  }
+  if (!event.target.closest('.filter-select')) closeFilterSelects();
   const target = event.target.closest('[data-view]');
   if (target) showView(target.dataset.view);
   const viewTarget = event.target.closest('[data-view-target]');
@@ -238,9 +308,17 @@ document.addEventListener('click', (event) => {
     loadAll();
   }
   const tagAction = event.target.closest('[data-tag-action]');
-  if (tagAction && tagAction.dataset.tagAction === 'delete') deleteTag(tagAction.dataset.tagName);
+  if (tagAction?.dataset.tagAction === 'edit') {
+    const tag = state.tags.find((item) => item.name === tagAction.dataset.tagName);
+    if (tag) tagDialog(tag);
+  }
+  if (tagAction?.dataset.tagAction === 'delete') deleteTag(tagAction.dataset.tagName);
   const close = event.target.closest('[data-close-dialog]');
   if (close) $(`#${close.dataset.closeDialog}`).close();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeFilterSelects();
 });
 
 $('#add-server').addEventListener('click', () => serverDialog());
@@ -252,15 +330,6 @@ $('#tool-search').addEventListener('input', () => {
   clearTimeout(toolSearchTimer);
   toolSearchTimer = setTimeout(() => loadAll(), 250);
 });
-$('#tool-tag-filter').addEventListener('change', () => { state.toolPage = 1; loadAll(); });
-$('#tool-server-filter').addEventListener('change', () => { state.toolPage = 1; loadAll(); });
-document.addEventListener('change', (event) => {
-  if (event.target?.id === 'tool-page-size') {
-    state.toolPageSize = Number(event.target.value) || 20;
-    state.toolPage = 1;
-    loadAll();
-  }
-});
 $('#server-filters').addEventListener('click', (event) => { const button = event.target.closest('[data-server-filter]'); if (!button) return; state.serverFilter = button.dataset.serverFilter; renderServers(); });
 
 $('#server-form').addEventListener('submit', async (event) => {
@@ -271,7 +340,9 @@ $('#server-form').addEventListener('submit', async (event) => {
     const args = data.args ? JSON.parse(data.args) : [];
     const headers = data.headers ? JSON.parse(data.headers) : {};
     if (!Array.isArray(args) || typeof headers !== 'object' || Array.isArray(headers)) throw new Error('Args must be an array, Headers must be a JSON object');
-    const payload = { id: data.id, name: data.name, type: data.type, enabled: data.enabled === 'true', command: data.command || undefined, args, cwd: data.cwd || undefined, url: data.url || undefined, headers };
+    const timeoutMs = data.timeoutMs === '' ? null : Number(data.timeoutMs);
+    if (timeoutMs !== null && (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 3600000)) throw new Error(__('server_timeout_invalid'));
+    const payload = { id: data.id, name: data.name, type: data.type, enabled: data.enabled === 'true', timeoutMs, command: data.command || undefined, args, cwd: data.cwd || undefined, url: data.url || undefined, headers };
     await api(state.editingServer ? `/api/v1/servers/${encodeURIComponent(state.editingServer.id)}` : '/api/v1/servers', { method: state.editingServer ? 'PUT' : 'POST', body: JSON.stringify({ ...payload, ...(state.editingServer ? { version: state.editingServer.version } : {}) }) });
     $('#server-dialog').close();
     toast(state.editingServer ? __('toast_server_updated') : __('toast_server_added'));
@@ -297,10 +368,8 @@ $('#tool-form').addEventListener('submit', async (event) => {
     || concurrencyLimit !== (tool.concurrencyLimit ?? null);
   try {
     const tags = $$('#tool-tag-options input:checked').map((item) => item.value);
-    // Tag associations are independent from tool metadata. Do not submit a
-    // stale metadata version when the user only changes tags.
     if (metadataChanged) {
-      await api(`/api/v1/servers/${encodeURIComponent(tool.serverId)}/tools/${encodeURIComponent(tool.upstreamName)}`, { method: 'PUT', body: JSON.stringify({ displayName, descriptionOverride, timeoutMs, concurrencyLimit, version: tool.version }) });
+      await api(`/api/v1/servers/${encodeURIComponent(tool.serverId)}/tools/${encodeURIComponent(tool.upstreamName)}`, { method: 'PUT', body: JSON.stringify({ displayName, descriptionOverride, timeoutMs, concurrencyLimit }) });
     }
     await api(`/api/v1/servers/${encodeURIComponent(tool.serverId)}/tools/${encodeURIComponent(tool.upstreamName)}/tags`, { method: 'PUT', body: JSON.stringify({ tags }) });
     $('#tool-dialog').close();
@@ -317,9 +386,24 @@ $('#tag-form').addEventListener('submit', async (event) => {
   try { await api('/api/v1/tags', { method: 'POST', body: JSON.stringify(data) }); form.reset(); toast(__('toast_tag_created')); await loadAll(); } catch (error) { toast(error.message, true); }
 });
 
+$('#tag-edit-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const tag = state.editingTag;
+  if (!tag) return;
+  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+  try {
+    await api(`/api/v1/tags/${encodeURIComponent(tag.name)}`, { method: 'PUT', body: JSON.stringify({ displayName: data.displayName?.trim() || null, description: data.description?.trim() || null }) });
+    $('#tag-edit-dialog').close();
+    state.editingTag = null;
+    toast(__('toast_tag_updated'));
+    await loadAll();
+  } catch (error) { toast(error.message, true); }
+});
+
 async function deleteTag(name) {
   if (!confirm(`${__('tags_delete_confirm', {0: name})}`)) return;
   try { await api(`/api/v1/tags/${encodeURIComponent(name)}`, { method: 'DELETE' }); toast(__('toast_tag_deleted')); await loadAll(); } catch (error) { toast(error.message, true); }
 }
 
+renderEndpointUrls();
 loadAll();

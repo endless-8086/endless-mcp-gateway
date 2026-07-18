@@ -1,0 +1,3 @@
+ALTER TABLE mcp_servers
+  ADD COLUMN IF NOT EXISTS timeout_ms INTEGER
+  CHECK (timeout_ms IS NULL OR timeout_ms BETWEEN 100 AND 3600000);

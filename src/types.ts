@@ -13,6 +13,7 @@ export interface ServerConfig {
   url?: string;
   headers?: Record<string, string>;
   config?: Record<string, unknown>;
+  timeoutMs?: number | null;
   status?: RuntimeStatus;
   lastError?: string | null;
   lastConnectedAt?: string | null;

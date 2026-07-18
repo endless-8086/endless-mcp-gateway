@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
   url TEXT,
   headers JSONB NOT NULL DEFAULT '{}'::jsonb,
   config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  timeout_ms INTEGER CHECK (timeout_ms IS NULL OR timeout_ms BETWEEN 100 AND 3600000),
   status TEXT NOT NULL DEFAULT 'STOPPED',
   last_error TEXT,
   last_connected_at TIMESTAMPTZ,

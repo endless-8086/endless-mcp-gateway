@@ -7,7 +7,6 @@
       nav_tools: '工具目录',
       nav_tags: '标签管理',
       connected: '控制面已连接',
-      theme_toggle: '切换主题',
       control_plane: 'CONTROL PLANE',
       page_overview: '网关总览',
       page_servers: '上游服务',
@@ -16,19 +15,28 @@
       token_label: '管理令牌',
       token_placeholder: 'ADMIN_TOKEN',
       token_save: '保存',
+      token_show: '显示令牌',
+      token_hide: '隐藏令牌',
       refresh_data: '刷新数据',
-      open_mcp: '打开 MCP',
       hero_title: '让每一个工具，都能被安全地组合。',
       hero_sub: '统一接入 stdio、SSE 与 Streamable HTTP 上游，按服务和标签分发工具。',
       metric_servers: '上游服务',
       metric_tools: '可用工具',
       metric_tags: '标签',
-      metric_endpoint: 'MCP Endpoint',
       metric_loading: '加载中',
       metric_sub_servers: '{0} 个已配置',
       metric_sub_tools: '{0} 个已发现',
       metric_sub_tags: '工具分组',
-      metric_sub_endpoint: '/mcp · /servers · /tags',
+      endpoint_overline: 'MCP CONNECTION',
+      endpoint_title: '连接端点',
+      endpoint_description: '将下列地址配置到支持 Streamable HTTP 的 MCP 客户端。',
+      endpoint_auth_label: '鉴权',
+      endpoint_all_label: '全部工具',
+      endpoint_all_description: '聚合所有已启用的上游工具，适合主 Agent 使用。',
+      endpoint_server_label: '指定服务',
+      endpoint_server_description: '仅暴露一个上游服务的工具；将 {serverId} 替换为服务 ID。',
+      endpoint_tag_label: '指定标签',
+      endpoint_tag_description: '仅暴露关联标签的工具；将 {tag} 替换为标签名称。',
       runtime_heading: '运行中的上游',
       view_all: '查看全部 →',
       overview_empty_title: '还没有启用的上游服务',
@@ -88,6 +96,10 @@
       server_name: '名称',
       server_type: '类型',
       server_enabled: '启用',
+      server_timeout_ms: '服务超时（毫秒）',
+      server_timeout_placeholder: '1800000',
+      server_timeout_hint: '留空使用 Gateway 默认值；工具单独设置超时时优先使用工具值。',
+      server_timeout_invalid: '服务超时必须在 100 到 3600000 毫秒之间。',
       server_command: 'Command',
       server_args: 'Args（JSON 数组）',
       server_cwd: '工作目录',
@@ -107,6 +119,7 @@
       toast_token_saved: '管理令牌已保存在当前浏览器',
       toast_tool_updated: '工具元数据已更新',
       toast_tag_created: '标签已创建',
+      toast_tag_updated: '标签已更新',
       toast_tag_deleted: '标签已删除',
       toast_load_failed: '无法加载控制面数据',
       toast_version_conflict_server: '服务配置已被其他操作更新，请刷新服务列表后重试',
@@ -121,6 +134,8 @@
       dialog_tool_concurrency_placeholder: '使用服务默认值',
       dialog_tool_tags: 'TAGS',
       dialog_save_tool: '保存工具',
+      dialog_edit_tag: '编辑标签「{0}」',
+      dialog_save_tag: '保存标签',
       dialog_form_hint: '敏感 Header 建议使用环境变量或 Secret Manager，不要直接保存在浏览器。',
       dialog_edit_tool_subtitle: '{0}',
       tags_heading: '标签管理',
@@ -159,7 +174,6 @@
       nav_tools: 'Tools',
       nav_tags: 'Tags',
       connected: 'Control plane connected',
-      theme_toggle: 'Toggle theme',
       control_plane: 'CONTROL PLANE',
       page_overview: 'Gateway Overview',
       page_servers: 'Upstream Servers',
@@ -168,19 +182,28 @@
       token_label: 'Admin Token',
       token_placeholder: 'ADMIN_TOKEN',
       token_save: 'Save',
+      token_show: 'Show token',
+      token_hide: 'Hide token',
       refresh_data: 'Refresh',
-      open_mcp: 'Open MCP',
       hero_title: 'Compose every tool, securely.',
       hero_sub: 'Aggregate stdio, SSE and Streamable HTTP upstreams. Route tools by server and tag.',
       metric_servers: 'Servers',
       metric_tools: 'Tools',
       metric_tags: 'Tags',
-      metric_endpoint: 'MCP Endpoint',
       metric_loading: 'Loading…',
       metric_sub_servers: '{0} configured',
       metric_sub_tools: '{0} discovered',
       metric_sub_tags: 'Tool groups',
-      metric_sub_endpoint: '/mcp · /servers · /tags',
+      endpoint_overline: 'MCP CONNECTION',
+      endpoint_title: 'Connection Endpoints',
+      endpoint_description: 'Configure one of these URLs in an MCP client that supports Streamable HTTP.',
+      endpoint_auth_label: 'Authentication',
+      endpoint_all_label: 'All Tools',
+      endpoint_all_description: 'Aggregates every enabled upstream tool. Use this endpoint for the primary agent.',
+      endpoint_server_label: 'One Server',
+      endpoint_server_description: 'Exposes one upstream server only. Replace {serverId} with the server ID.',
+      endpoint_tag_label: 'One Tag',
+      endpoint_tag_description: 'Exposes tools assigned to one tag. Replace {tag} with the tag name.',
       runtime_heading: 'Active Upstreams',
       view_all: 'View all →',
       overview_empty_title: 'No active upstreams',
@@ -240,6 +263,10 @@
       server_name: 'Name',
       server_type: 'Type',
       server_enabled: 'Enabled',
+      server_timeout_ms: 'Service Timeout (ms)',
+      server_timeout_placeholder: '1800000',
+      server_timeout_hint: 'Leave empty to use the Gateway default. A per-tool timeout overrides this value.',
+      server_timeout_invalid: 'Service timeout must be between 100 and 3600000 milliseconds.',
       server_command: 'Command',
       server_args: 'Args (JSON array)',
       server_cwd: 'Working Directory',
@@ -259,6 +286,7 @@
       toast_token_saved: 'Admin token saved to browser',
       toast_tool_updated: 'Tool metadata updated',
       toast_tag_created: 'Tag created',
+      toast_tag_updated: 'Tag updated',
       toast_tag_deleted: 'Tag deleted',
       toast_load_failed: 'Failed to load control plane data',
       toast_version_conflict_server: 'Server config was updated elsewhere. Refresh the server list and try again.',
@@ -273,6 +301,8 @@
       dialog_tool_concurrency_placeholder: 'Use server default',
       dialog_tool_tags: 'TAGS',
       dialog_save_tool: 'Save Tool',
+      dialog_edit_tag: 'Edit tag "{0}"',
+      dialog_save_tag: 'Save Tag',
       dialog_form_hint: 'Store sensitive headers in environment variables or a Secret Manager, not the browser.',
       dialog_edit_tool_subtitle: '{0}',
       tags_heading: 'Tag Manager',
@@ -371,11 +401,42 @@
     initSwitcher();
   }
   function initSwitcher() {
-    var sel = document.getElementById("lang-switch");
-    if (!sel) return;
-    sel.value = currentLang;
-    sel.addEventListener("change", function(e) {
-      setLanguage(e.target.value);
+    var trigger = document.getElementById('lang-switch');
+    var label = document.getElementById('lang-switch-label');
+    var menu = document.getElementById('lang-menu');
+    if (!trigger || !label || !menu) return;
+
+    function closeMenu() {
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function updateLabel() {
+      label.textContent = currentLang === 'zh' ? '中文' : 'English';
+      var options = menu.querySelectorAll('[data-lang-option]');
+      for (var i = 0; i < options.length; i++) {
+        options[i].setAttribute('aria-selected', String(options[i].dataset.langOption === currentLang));
+      }
+    }
+
+    updateLabel();
+    trigger.addEventListener('click', function() {
+      var nextOpen = menu.hidden;
+      menu.hidden = !nextOpen;
+      trigger.setAttribute('aria-expanded', String(nextOpen));
+    });
+    menu.addEventListener('click', function(event) {
+      var option = event.target.closest('[data-lang-option]');
+      if (!option) return;
+      setLanguage(option.dataset.langOption);
+      updateLabel();
+      closeMenu();
+    });
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.language-picker')) closeMenu();
+    });
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') closeMenu();
     });
   }
 

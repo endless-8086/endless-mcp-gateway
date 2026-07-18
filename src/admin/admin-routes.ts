@@ -8,7 +8,7 @@ import { requireAdmin } from './auth.js';
 const serverSchema = z.object({
   id: z.string().regex(/^[a-zA-Z0-9_-]+$/), name: z.string().min(1), type: z.enum(['stdio', 'streamable-http', 'sse']),
   enabled: z.boolean().default(true), command: z.string().optional(), args: z.array(z.string()).optional(), cwd: z.string().optional(),
-  env: z.record(z.string()).optional(), url: z.string().url().optional(), headers: z.record(z.string()).optional(), config: z.record(z.unknown()).optional(), version: z.number().int().optional()
+  env: z.record(z.string()).optional(), url: z.string().url().optional(), headers: z.record(z.string()).optional(), config: z.record(z.unknown()).optional(), timeoutMs: z.number().int().min(100).max(3600000).nullable().optional(), version: z.number().int().optional()
 }).superRefine((value, ctx) => {
   if (value.type === 'stdio' && !value.command) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'stdio requires command', path: ['command'] });
   if (value.type !== 'stdio' && !value.url) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'remote server requires url', path: ['url'] });
@@ -86,7 +86,7 @@ export async function registerAdminRoutes(app: FastifyInstance, repo: GatewayRep
   app.put('/api/v1/servers/:id/tools/:toolName', async (request, reply) => {
     try {
       const params = request.params as { id: string; toolName: string };
-      const patch = z.object({ enabled: z.boolean().optional(), displayName: z.string().nullable().optional(), descriptionOverride: z.string().nullable().optional(), timeoutMs: z.number().int().min(100).max(3600000).nullable().optional(), concurrencyLimit: z.number().int().min(1).max(1000).nullable().optional(), version: z.number().int().optional() }).parse(request.body);
+      const patch = z.object({ enabled: z.boolean().optional(), displayName: z.string().nullable().optional(), descriptionOverride: z.string().nullable().optional(), timeoutMs: z.number().int().min(100).max(3600000).nullable().optional(), concurrencyLimit: z.number().int().min(1).max(1000).nullable().optional() }).parse(request.body);
       const result = await repo.patchTool(params.id, params.toolName, patch);
       if (!result) { reply.code(404).send({ error: 'TOOL_NOT_FOUND' }); return; }
       await db.notify('gateway_config_changed', { serverId: params.id, action: 'tool.updated' });

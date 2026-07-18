@@ -1,137 +1,208 @@
 # Endless MCP Gateway
 
-A gateway that aggregates stdio, SSE, and Streamable HTTP upstream MCP servers into a single Streamable HTTP MCP endpoint.
+[中文文档](README_CN.md)
 
-Core protocol support uses the official [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/sdk), with PostgreSQL 18 for configuration and operational auditing.
-> [中文文档](README_CN.md)
+Endless MCP Gateway aggregates `stdio`, `SSE`, and Streamable HTTP upstream MCP servers into one managed Streamable HTTP data plane. It provides an admin console, persistent PostgreSQL configuration, scoped MCP endpoints, and operational safeguards for long-running tool calls.
 
+> **Runtime requirements:** Node.js 24+ and PostgreSQL 18+.
 
-## Features
+## What It Provides
 
-- Connect `stdio`, `sse`, and `streamable-http` MCP upstreams.
-- Each stdio upstream runs as an independent child process via the MCP SDK — no shared stdin/stdout.
-- Aggregate `tools/list` and `tools/call` across multiple upstreams.
-- Per-tool enable/disable, display name, description override, timeout, and concurrency settings.
-- Tag creation, editing, deletion, and tool-tag associations.
-- Expose MCP endpoints filtered by server or tag.
-- PostgreSQL 18 with transactions, optimistic locking, and `LISTEN/NOTIFY` for configuration sync.
-- Upstream connection status, failure details, and admin operation audit trails.
-- Request size limits, tool call timeouts, concurrency caps, and admin API authentication.
+- Connect multiple `stdio`, `sse`, and `streamable-http` upstream MCP servers.
+- Run each stdio upstream as its own MCP SDK child process; upstreams do not share stdin, stdout, transport, or mutable request state.
+- Aggregate `tools/list` and `tools/call` behind one Streamable HTTP endpoint.
+- Expose the entire catalog, one server, or one tag through separate MCP URLs.
+- Manage upstreams, health, refreshes, enablement, tool metadata, per-tool limits, and tags from a bilingual admin console.
+- Apply timeout precedence predictably: **tool override -> server override -> Gateway default**.
+- Persist configuration and audit data in PostgreSQL; propagate changes across instances with `LISTEN` / `NOTIFY`.
+- Apply request-size, timeout, concurrency, stdio-command, and remote-host controls.
+
+## Admin Console
+
+Open `http://localhost:8080/` after the Gateway starts. The console supports Chinese and English, and stores only the admin token in the current browser's `localStorage`.
+
+### Overview
+
+The overview combines endpoint guidance, catalog metrics, and current upstream health.
+
+![Gateway overview](docs/images/admin-overview-en.png)
+
+### Upstream Servers
+
+Create, edit, enable, disable, refresh, and inspect configured stdio, SSE, and Streamable HTTP servers.
+
+![Upstream servers](docs/images/admin-servers-en.png)
+
+### Tool Catalog
+
+Search and filter the discovered tool catalog. Each tool can be enabled or disabled, and can override its display name, description, timeout, concurrency limit, and tags.
+
+![Tool catalog](docs/images/admin-tools-en.png)
+
+### Tag Manager
+
+Create tags and associate them with tools. Existing tag identifiers are immutable; their display name and description can be edited safely.
+
+![Tag manager](docs/images/admin-tags-en.png)
+
+## Architecture
+
+```text
+MCP clients
+  |  Streamable HTTP
+  v
+Gateway data plane (/mcp, /mcp/servers/:id, /mcp/tags/:tag)
+  |  immutable catalog snapshots
+  +--> stdio upstreams (isolated child processes)
+  +--> SSE upstreams
+  +--> Streamable HTTP upstreams
+
+Admin console / Admin API --> PostgreSQL <-- LISTEN / NOTIFY --> Gateway instances
+```
+
+The control plane manages configuration and catalog metadata. The data plane serves downstream MCP clients and routes a tool invocation to the owning upstream connector.
 
 ## Quick Start
 
-Requires Node.js 24+ and PostgreSQL 18+.
+### 1. Install dependencies
 
-```bash
-cp .env.example .env
+```powershell
 npm install
+```
+
+### 2. Start PostgreSQL
+
+For local development, the included Compose service is the quickest option:
+
+```powershell
+docker compose up -d postgres
+$env:DATABASE_URL = 'postgres://mcp_gateway:mcp_gateway@localhost:5432/mcp_gateway'
+```
+
+### 3. Configure the Gateway
+
+The application reads `config/gateway.json` by default. Copy the example, fill in your values, and keep the real file out of Git:
+
+```powershell
+Copy-Item config/gateway.example.json config/gateway.json
+```
+
+Alternatively, set configuration through process environment variables. Environment variables override JSON values, which is useful for containers and CI.
+
+### 4. Migrate and run
+
+```powershell
 npm run db:migrate
 npm run dev
 ```
 
-Default address: `http://localhost:8080`.
+The default address is `http://localhost:8080`.
 
-The app reads `config/gateway.json` by default. Copy `config/gateway.example.json` and adjust the database connection. Set `MCP_GATEWAY_CONFIG` to point to an alternative JSON file. Environment variables take precedence over JSON config — useful for containers and CI.
+For a production build:
 
-Open `http://localhost:8080/` for the admin console (Chinese UI). If `ADMIN_TOKEN` is set, enter it in the top-right corner and save; the token is only stored in the browser's `localStorage`.
-
-If npm didn't create `.bin` links:
-
-```bash
-node node_modules/tsx/dist/cli.mjs src/main.ts
-```
-
-### PostgreSQL Docker
-
-```bash
-docker compose up -d postgres
-export DATABASE_URL="postgres://mcp_gateway:mcp_gateway@localhost:5432/mcp_gateway"
-npm run db:migrate
+```powershell
+npm run build
 npm start
 ```
 
-In production, store `DATABASE_URL`, `ADMIN_TOKEN`, and upstream secrets in a secret manager or environment variables — never commit `.env`.
+## Configuration
 
-Remote PostgreSQL example (do not commit real credentials):
-
-```bash
-export DATABASE_URL="postgres://<user>:<password>@192.168.99.101:5432/mcp-gateway"
-npm run db:migrate
-npm start
-```
-
-Example JSON config:
+`config/gateway.example.json` is the complete configuration reference. Set `MCP_GATEWAY_CONFIG` when the JSON file lives elsewhere.
 
 ```json
 {
+  "nodeEnv": "production",
+  "http": { "host": "0.0.0.0", "port": 8080 },
   "database": {
-    "url": "postgres://<user>:<password>@192.168.99.101:5432/mcp-gateway",
+    "url": "postgres://<user>:<password>@<host>:5432/mcp-gateway",
     "poolMax": 20,
     "connectionTimeoutMs": 5000
   },
-  "http": { "host": "0.0.0.0", "port": 8080 },
   "security": {
-    "adminToken": "change-me",
-    "upgradeInsecureRequests": false
+    "adminToken": "replace-me",
+    "mcpToken": "replace-me",
+    "allowedStdioCommands": ["npx"],
+    "allowedUpstreamHosts": ["mcp.example.com"],
+    "allowPrivateUpstreams": false
+  },
+  "runtime": {
+    "refreshIntervalMs": 60000,
+    "defaultCallTimeoutMs": 1800000,
+    "maxToolConcurrency": 8
   }
 }
 ```
 
-The gateway serves the admin console over HTTP by default, so `upgradeInsecureRequests` is off. Only enable it behind a reverse proxy or when HTTPS is set up on the gateway itself.
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | local PostgreSQL example | PostgreSQL connection string |
+| `ADMIN_TOKEN` | empty | Bearer token for the admin API; required in production |
+| `MCP_TOKEN` | empty | Optional shared Bearer token for the MCP data plane |
+| `TOOL_REFRESH_INTERVAL_MS` | `60000` | Upstream tool-catalog refresh interval |
+| `DEFAULT_CALL_TIMEOUT_MS` | `1800000` | Gateway default tool-call timeout (30 minutes) |
+| `MAX_TOOL_CONCURRENCY` | `8` | Default concurrent calls per upstream |
+| `MAX_BODY_BYTES` | `1048576` | Maximum HTTP request body size |
+| `ALLOWED_STDIO_COMMANDS` | empty | Comma-separated stdio executable allowlist |
+| `ALLOWED_UPSTREAM_HOSTS` | empty | Comma-separated remote upstream hostname allowlist |
+| `ALLOW_PRIVATE_UPSTREAMS` | `true` in development | Whether private remote addresses are allowed |
+
+`DB_POOL_MAX`, `DB_IDLE_TIMEOUT_MS`, `DB_CONNECTION_TIMEOUT_MS`, `DB_MAX_USES`, `MAX_UPSTREAM_RESTARTS`, and `UPSTREAM_RESTART_BACKOFF_MS` are also available as environment overrides.
+
+## Authentication and Security Boundary
+
+The Gateway has two independent shared-secret boundaries:
+
+| Surface | Credential | Behavior |
+| --- | --- | --- |
+| Admin console and `/api/v1/*` | `ADMIN_TOKEN` | Protects configuration and operational APIs. The browser sends it as `Authorization: Bearer <ADMIN_TOKEN>`. |
+| MCP data plane | `MCP_TOKEN` | When set, protects every `/mcp` endpoint with `Authorization: Bearer <MCP_TOKEN>`. When unset, the MCP data plane is open. |
+
+`MCP_TOKEN` is currently a single shared token, not a client-identity or scoped authorization system. For production deployments, put the Gateway behind HTTPS and add network controls, secret management, and, where needed, an identity-aware proxy.
+
+Never commit `config/gateway.json`, `.env`, real database URLs, or tokens.
+
+## MCP Endpoints
+
+Configure a Streamable HTTP-capable MCP client with one of these URLs:
+
+| Scope | Endpoint | Result |
+| --- | --- | --- |
+| All enabled tools | `/mcp` | Aggregates every enabled upstream tool. |
+| One upstream | `/mcp/servers/{serverId}` | Exposes tools from one server only. |
+| One tag | `/mcp/tags/{tag}` | Exposes enabled tools associated with one tag. |
+
+For example:
+
+```text
+http://localhost:8080/mcp
+```
+
+Tool names are stable and fully qualified:
+
+```text
+filesystem.read_file
+github.search_issues
+```
 
 ## Admin API
 
-All admin endpoints except `/healthz` and `/readyz` require:
+All admin routes require `Authorization: Bearer <ADMIN_TOKEN>` when `ADMIN_TOKEN` is configured. Health probes remain public.
 
-```
-Authorization: Bearer <ADMIN_TOKEN>
-```
+| Area | Routes |
+| --- | --- |
+| Health | `GET /healthz`, `GET /readyz` |
+| Servers | `GET, POST /api/v1/servers`; `GET, PUT, DELETE /api/v1/servers/{id}`; `POST /enable`, `/disable`, `/refresh`; `GET /health` |
+| Tools | `GET /api/v1/tools`; `GET /api/v1/servers/{id}/tools`; `PUT /api/v1/servers/{id}/tools/{toolName}`; `PUT /api/v1/servers/{id}/tools/{toolName}/tags` |
+| Tags | `GET, POST /api/v1/tags`; `PUT, DELETE /api/v1/tags/{name}` |
+| Runtime | `GET /api/v1/runtime` |
 
-### Create a stdio Upstream
+The tool list supports server-side filters and paging:
 
-```bash
-curl -X POST http://localhost:8080/api/v1/servers \
-  -H "Authorization: Bearer change-me" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "filesystem",
-    "name": "Filesystem MCP",
-    "type": "stdio",
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/data"],
-    "enabled": true
-  }'
+```text
+GET /api/v1/tools?paginate=true&page=1&pageSize=20&search=maps&serverId=gaode&tag=geo&includeDisabled=true
 ```
 
-### API Reference
-
-```
-GET    /api/v1/servers
-POST   /api/v1/servers
-PUT    /api/v1/servers/{id}
-DELETE /api/v1/servers/{id}
-POST   /api/v1/servers/{id}/enable
-POST   /api/v1/servers/{id}/disable
-POST   /api/v1/servers/{id}/refresh
-GET    /api/v1/servers/{id}/health
-
-GET    /api/v1/tools
-PUT    /api/v1/servers/{id}/tools/{toolName}
-PUT    /api/v1/servers/{id}/tools/{toolName}/tags
-
-GET    /api/v1/tags
-POST   /api/v1/tags
-PUT    /api/v1/tags/{name}
-DELETE /api/v1/tags/{name}
-```
-
-The tools list supports pagination and server-side filtering:
-
-```
-GET /api/v1/tools?paginate=true&page=1&pageSize=20&search=maps&serverId=1001&tag=geo&includeDisabled=true
-```
-
-Paginated response:
+With `paginate=true`, the response is:
 
 ```json
 {
@@ -143,73 +214,36 @@ Paginated response:
 }
 ```
 
-Without `paginate=true`, the original array format is returned for backward compatibility.
+Without `paginate=true`, the API returns the tool array for compatibility.
 
-Server and tool updates use `version`-based optimistic locking; mismatched versions return HTTP 409.
+## Upstream Runtime Semantics
 
-## MCP Endpoint
+- A stdio upstream is spawned through the official MCP SDK, never through a shell.
+- Every upstream owns an independent client, transport, request sequence, and concurrency semaphore.
+- Refreshes do not interrupt an active tool call; a periodic refresh is deferred while the upstream is busy.
+- A server timeout overrides the Gateway default, and a tool timeout overrides the server timeout.
+- Catalog discovery updates upstream metadata without invalidating operator tool settings.
+- Failures are isolated to the affected upstream and surfaced through runtime health and logs.
 
-```
-POST /mcp
-POST /mcp/servers/{serverId}
-POST /mcp/tags/{tag}
-```
+## Development and Verification
 
-When `MCP_TOKEN` is set, the data plane requires:
-
-```
-Authorization: Bearer <MCP_TOKEN>
-```
-
-Tools use stable fully-qualified names, e.g.:
-
-```
-filesystem.read_file
-github.search_issues
+```powershell
+npm run lint
+npm test
+npm run build
 ```
 
-MCP clients can configure `http://localhost:8080/mcp` directly as a Streamable HTTP server. Tag-scoped endpoints only return tools matching the given tag that are also enabled.
+The test suite covers transport isolation, concurrency, tool refresh behavior, timeout precedence, HTTP MCP initialization, pagination, catalog synchronization, and admin UI structural regressions.
 
-## Configuration
+## Production Checklist
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `HOST` | `0.0.0.0` | HTTP listen address |
-| `PORT` | `8080` | HTTP listen port |
-| `DATABASE_URL` | local example | PostgreSQL 18 connection string |
-| `ADMIN_TOKEN` | *empty* | Admin API Bearer token; **must be set in production** |
-| `MCP_TOKEN` | *empty* | MCP data-plane Bearer token |
-| `TOOL_REFRESH_INTERVAL_MS` | `60000` | Auto-refresh upstream tool lists |
-| `DEFAULT_CALL_TIMEOUT_MS` | `1800000` | Default tool call timeout (30 minutes) |
-| `MAX_TOOL_CONCURRENCY` | `8` | Default concurrency per upstream |
-| `MAX_BODY_BYTES` | `1048576` | Maximum HTTP request body size |
-| `ALLOWED_STDIO_COMMANDS` | *empty* | Comma-separated stdio executable allowlist |
-| `ALLOWED_UPSTREAM_HOSTS` | *empty* | Remote upstream hostname allowlist |
-| `ALLOW_PRIVATE_UPSTREAMS` | `true` (dev) | Disable in production to reduce SSRF risk |
-
-## Process & Concurrency Safety
-
-- stdio transports use the SDK's `StdioClientTransport` — no shell — with one independent child process per upstream.
-- Each upstream holds its own MCP Client, Transport, request ID counter, and concurrency semaphore.
-- Configuration changes are written inside PostgreSQL transactions and broadcast via `pg_notify` so all gateway instances refresh their in-memory snapshots.
-- Tool calls read from an immutable directory snapshot; upstream Transports share no mutable state across requests.
-- Upstream connection failures do not affect other upstreams; call errors are mapped to MCP JSON-RPC errors.
-
-## Testing & Build
-
-```bash
-npx tsc -p tsconfig.json
-npx tsx --test test/connector.test.ts test/gateway-http.test.ts
-```
-
-Tests cover: AsyncMutex serialization, Semaphore concurrency limits, stdio child-process MCP tool calls, Streamable HTTP MCP initialization, tool listing, and tool invocation.
-
-The admin console serves static assets through a fixed-route allowlist (`/`, `/index.html`, `/styles.css`, `/app.js`) with no open directory mapping.
-
-## Security
-
-Production deployments should additionally enable at the reverse proxy or platform level: HTTPS, admin API IP allowlisting, remote URL SSRF allowlist, stdio command allowlist, a secret manager, Prometheus/OpenTelemetry, and finer-grained RBAC.
+- Use HTTPS, ideally terminated at a reverse proxy.
+- Set `ADMIN_TOKEN`; set `MCP_TOKEN` whenever the data plane is not fully trusted.
+- Restrict `ALLOWED_STDIO_COMMANDS` and `ALLOWED_UPSTREAM_HOSTS`.
+- Disable `ALLOW_PRIVATE_UPSTREAMS` unless private network targets are intentional.
+- Store credentials in a secret manager or deployment environment, never in the repository.
+- Monitor application logs and PostgreSQL health; add metrics and tracing appropriate to the deployment.
 
 ---
 
-*[中文文档](README_CN.md)*
+[中文文档](README_CN.md)

@@ -96,6 +96,8 @@ export interface UpstreamConnector {
   close(): Promise<void>;
   listTools(): Promise<McpTool[]>;
   tryListTools(): Promise<McpTool[] | undefined>;
+  callTimeoutMs(): number;
+  callTimeoutSource(): 'server.timeoutMs' | 'runtime.defaultCallTimeoutMs';
   callTool(name: string, args: unknown, signal?: AbortSignal, timeoutMs?: number): Promise<McpCallResult>;
   health(): HealthStatus;
 }
@@ -280,7 +282,15 @@ export class McpClientConnector implements UpstreamConnector {
     }
   }
 
-  async callTool(name: string, args: unknown, signal?: AbortSignal, timeoutMs = this.defaults.timeoutMs): Promise<McpCallResult> {
+  callTimeoutMs(): number {
+    return this.server.timeoutMs ?? this.defaults.timeoutMs;
+  }
+
+  callTimeoutSource(): 'server.timeoutMs' | 'runtime.defaultCallTimeoutMs' {
+    return this.server.timeoutMs == null ? 'runtime.defaultCallTimeoutMs' : 'server.timeoutMs';
+  }
+
+  async callTool(name: string, args: unknown, signal?: AbortSignal, timeoutMs = this.callTimeoutMs()): Promise<McpCallResult> {
     await this.connect();
     const releaseSemaphore = await this.semaphore.acquire();
     const releaseRequest = await this.requestGate.acquireRead();

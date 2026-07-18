@@ -51,3 +51,11 @@ test('catalog refresh waits for an active tool call to finish', async () => {
   assert.equal((await connector.tryListTools())?.[0].name, 'echo');
   await connector.close();
 });
+
+test('service timeout overrides the gateway call timeout', () => {
+  const connector = new McpClientConnector('fixture', {
+    id: 'fixture', name: 'fixture', type: 'stdio', enabled: true, command: process.execPath, timeoutMs: 120000
+  }, { timeoutMs: 5000, maxConcurrency: 2 });
+  assert.equal(connector.callTimeoutMs(), 120000);
+  assert.equal(connector.callTimeoutSource(), 'server.timeoutMs');
+});

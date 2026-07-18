@@ -6,7 +6,7 @@ type ServerRow = {
   id: string; name: string; type: UpstreamType; enabled: boolean; command: string | null;
   args: string[]; cwd: string | null; env: Record<string, string>; url: string | null;
   headers: Record<string, string>; config: Record<string, unknown>; status: RuntimeStatus;
-  last_error: string | null; last_connected_at: Date | null; version: number;
+  timeout_ms: number | null; last_error: string | null; last_connected_at: Date | null; version: number;
 };
 
 type ToolRow = {
@@ -19,7 +19,7 @@ function mapServer(row: ServerRow): ServerConfig {
   return {
     id: row.id, name: row.name, type: row.type, enabled: row.enabled,
     command: row.command ?? undefined, args: row.args ?? [], cwd: row.cwd ?? undefined,
-    env: row.env ?? {}, url: row.url ?? undefined, headers: row.headers ?? {}, config: row.config ?? {},
+    env: row.env ?? {}, url: row.url ?? undefined, headers: row.headers ?? {}, config: row.config ?? {}, timeoutMs: row.timeout_ms,
     status: row.status, lastError: row.last_error, lastConnectedAt: row.last_connected_at?.toISOString() ?? null,
     version: row.version
   };
@@ -41,7 +41,6 @@ export interface ToolPatch {
   descriptionOverride?: string | null;
   timeoutMs?: number | null;
   concurrencyLimit?: number | null;
-  version?: number;
 }
 
 export interface ToolListOptions {
@@ -79,16 +78,16 @@ export class GatewayRepository {
         if (current.rowCount && current.rows[0].version !== version) throw new Error('VERSION_CONFLICT');
       }
       const result = await client.query<ServerRow>(`
-        INSERT INTO mcp_servers (id, name, type, enabled, command, args, cwd, env, url, headers, config, status, version)
-        VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8::jsonb,$9,$10::jsonb,$11::jsonb,COALESCE($12,'STOPPED'),COALESCE($13,1))
+        INSERT INTO mcp_servers (id, name, type, enabled, command, args, cwd, env, url, headers, config, timeout_ms, status, version)
+        VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8::jsonb,$9,$10::jsonb,$11::jsonb,$12,COALESCE($13,'STOPPED'),COALESCE($14,1))
         ON CONFLICT (id) DO UPDATE SET
           name=EXCLUDED.name, type=EXCLUDED.type, enabled=EXCLUDED.enabled, command=EXCLUDED.command,
           args=EXCLUDED.args, cwd=EXCLUDED.cwd, env=EXCLUDED.env, url=EXCLUDED.url, headers=EXCLUDED.headers,
-          config=EXCLUDED.config, version=mcp_servers.version + 1
+          config=EXCLUDED.config, timeout_ms=EXCLUDED.timeout_ms, version=mcp_servers.version + 1
         RETURNING *`, [
         server.id, server.name, server.type, server.enabled, server.command ?? null, JSON.stringify(server.args ?? []),
         server.cwd ?? null, JSON.stringify(server.env ?? {}), server.url ?? null, JSON.stringify(server.headers ?? {}),
-        JSON.stringify(server.config ?? {}), server.status ?? 'STOPPED', version ?? null
+        JSON.stringify(server.config ?? {}), server.timeoutMs ?? null, server.status ?? 'STOPPED', version ?? null
       ]);
       return mapServer(result.rows[0]);
     });
@@ -167,7 +166,6 @@ export class GatewayRepository {
   async syncTools(serverId: string, tools: McpTool[]): Promise<void> {
     await this.db.transaction(async (client) => {
       const names = tools.map((tool) => tool.name);
-      await client.query('UPDATE mcp_tools SET orphaned = TRUE, updated_at = now() WHERE server_id = $1', [serverId]);
       for (const tool of tools) {
         const exposedName = `${serverId}.${tool.name}`;
         await client.query(`
@@ -175,16 +173,18 @@ export class GatewayRepository {
           VALUES ($1,$2,$3,$4::jsonb,$5,FALSE,now())
           ON CONFLICT (server_id, upstream_name) DO UPDATE SET
             exposed_name=EXCLUDED.exposed_name, input_schema=EXCLUDED.input_schema,
-            upstream_description=EXCLUDED.upstream_description, orphaned=FALSE, last_seen_at=now(),
-            version=CASE WHEN mcp_tools.exposed_name IS DISTINCT FROM EXCLUDED.exposed_name
-              OR mcp_tools.input_schema IS DISTINCT FROM EXCLUDED.input_schema
-              OR mcp_tools.upstream_description IS DISTINCT FROM EXCLUDED.upstream_description
-              OR mcp_tools.orphaned IS DISTINCT FROM EXCLUDED.orphaned
-              THEN mcp_tools.version + 1 ELSE mcp_tools.version END`, [
+            upstream_description=EXCLUDED.upstream_description, orphaned=FALSE, last_seen_at=now()`, [
           serverId, tool.name, exposedName, JSON.stringify(tool.inputSchema ?? {}), tool.description ?? null
         ]);
       }
-      if (names.length) await client.query('UPDATE mcp_tools SET orphaned = FALSE WHERE server_id = $1 AND upstream_name = ANY($2::text[])', [serverId, names]);
+      // Discovery state is not user-managed configuration. Do not invalidate
+      // the UI's optimistic-lock version when an upstream catalog changes.
+      await client.query(`
+        UPDATE mcp_tools
+        SET orphaned = TRUE
+        WHERE server_id = $1
+          AND orphaned = FALSE
+          AND NOT (upstream_name = ANY($2::text[]))`, [serverId, names]);
     });
   }
 
@@ -199,9 +199,6 @@ export class GatewayRepository {
       if (patch.timeoutMs !== undefined) add('timeout_ms', patch.timeoutMs);
       if (patch.concurrencyLimit !== undefined) add('concurrency_limit', patch.concurrencyLimit);
       if (!fields.length) return this.getTool(serverId, upstreamName);
-      const current = await client.query<{ id: number; version: number }>('SELECT id, version FROM mcp_tools WHERE server_id=$1 AND upstream_name=$2 FOR UPDATE', [serverId, upstreamName]);
-      if (!current.rows[0]) return null;
-      if (patch.version !== undefined && current.rows[0].version !== patch.version) throw new Error('VERSION_CONFLICT');
       values.push(serverId, upstreamName);
       const result = await client.query<ToolRow>(`UPDATE mcp_tools SET ${fields.join(', ')}, version = version + 1 WHERE server_id = $${values.length - 1} AND upstream_name = $${values.length} RETURNING *`, values);
       if (!result.rows[0]) return null;

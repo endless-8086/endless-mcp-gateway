@@ -124,8 +124,8 @@ export class UpstreamManager {
   async callTool(tool: ToolMetadata, args: unknown, signal?: AbortSignal): Promise<McpCallResult> {
     const connector = this.connectors.get(tool.serverId);
     if (!connector) throw new Error('UPSTREAM_NOT_CONNECTED');
-    const timeoutSource = tool.timeoutMs == null ? 'runtime.defaultCallTimeoutMs' : 'tool.timeoutMs';
-    const timeoutMs = tool.timeoutMs ?? config.defaultCallTimeoutMs;
+    const timeoutSource = tool.timeoutMs == null ? connector.callTimeoutSource() : 'tool.timeoutMs';
+    const timeoutMs = tool.timeoutMs ?? connector.callTimeoutMs();
     const startedAt = Date.now();
     try {
       const result = await connector.callTool(tool.upstreamName, args, signal, timeoutMs);
