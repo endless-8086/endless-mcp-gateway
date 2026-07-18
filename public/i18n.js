@@ -369,4 +369,13 @@
   } else {
     applyToDOM();
   }
+  function initSwitcher() {
+    var sel = document.getElementById("lang-switch");
+    if (!sel) return;
+    sel.value = currentLang;
+    sel.addEventListener("change", function(e) {
+      setLanguage(e.target.value);
+    });
+  }
+
 })();
