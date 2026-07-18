@@ -9,7 +9,8 @@ function bearer(request: FastifyRequest): string | undefined {
 }
 
 export function requireAdmin(request: FastifyRequest, reply: FastifyReply, done: (error?: Error) => void): void {
-  if (!config.adminToken || timingSafeEqual(bearer(request) ?? '', config.adminToken)) { done(); return; }
+  if (!config.adminToken) { reply.code(401).send({ error: 'Admin token not configured' }); return; }
+  if (timingSafeEqual(bearer(request) ?? '', config.adminToken)) { done(); return; }
   reply.code(401).send({ error: 'Unauthorized' });
 }
 
@@ -21,6 +22,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 export function requireMcpToken(request: FastifyRequest, reply: FastifyReply, done: (error?: Error) => void): void {
-  if (!config.mcpToken || timingSafeEqual(bearer(request) ?? '', config.mcpToken)) { done(); return; }
+  if (!config.mcpToken) { reply.code(401).send({ error: 'MCP token not configured' }); return; }
+  if (timingSafeEqual(bearer(request) ?? '', config.mcpToken)) { done(); return; }
   reply.code(401).send({ error: 'Unauthorized' });
 }

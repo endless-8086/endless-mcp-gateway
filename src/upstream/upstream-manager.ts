@@ -20,10 +20,10 @@ export class UpstreamManager {
         this.ensureConnected(server).catch((error) => this.logger.warn({ err: error, serverId: server.id }, 'upstream connect failed'));
       }
     }
-    this.refreshTimer = setInterval(() => void this.refreshAll(), config.refreshIntervalMs);
+    this.refreshTimer = setInterval(() => { this.refreshAll().catch((error) => this.logger.warn({ err: error }, 'scheduled refresh failed')); }, config.refreshIntervalMs);
     this.refreshTimer.unref();
     this.stopListening = await this.db.listen('gateway_config_changed', (payload) => {
-      try { void this.reload(JSON.parse(payload)); } catch (error) { this.logger.warn({ err: error }, 'invalid config notification'); }
+      try { this.reload(JSON.parse(payload)).catch((error) => this.logger.warn({ err: error }, 'reload on config change failed')); } catch (error) { this.logger.warn({ err: error }, 'invalid config notification'); }
     });
   }
 

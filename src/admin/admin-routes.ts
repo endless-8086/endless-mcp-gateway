@@ -28,7 +28,7 @@ export async function registerAdminRoutes(app: FastifyInstance, repo: GatewayRep
       const input = serverSchema.parse(request.body);
       const saved = await repo.saveServer(input);
       await db.notify('gateway_config_changed', { serverId: saved.id, action: 'upsert' });
-      await repo.appendAudit(String(request.headers['x-actor'] ?? 'api'), 'server.create', 'server', saved.id);
+      await repo.appendAudit('admin', 'server.create', 'server', saved.id);
       reply.code(201).send(saved);
     } catch (error) { errorResponse(reply, error); }
   });
@@ -45,7 +45,7 @@ export async function registerAdminRoutes(app: FastifyInstance, repo: GatewayRep
       const input = serverSchema.parse({ ...existing, ...(request.body as object), id });
       const saved = await repo.saveServer(input, input.version);
       await db.notify('gateway_config_changed', { serverId: id, action: 'upsert' });
-      await repo.appendAudit(String(request.headers['x-actor'] ?? 'api'), 'server.update', 'server', id);
+      await repo.appendAudit('admin', 'server.update', 'server', id);
       reply.send(saved);
     } catch (error) { errorResponse(reply, error); }
   });
@@ -54,7 +54,7 @@ export async function registerAdminRoutes(app: FastifyInstance, repo: GatewayRep
     await manager.disable(id).catch(() => undefined);
     await repo.deleteServer(id);
     await db.notify('gateway_config_changed', { serverId: id, action: 'delete' });
-    await repo.appendAudit(String(request.headers['x-actor'] ?? 'api'), 'server.delete', 'server', id);
+    await repo.appendAudit('admin', 'server.delete', 'server', id);
     reply.code(204).send();
   });
   app.post('/api/v1/servers/:id/enable', async (request, reply) => updateEnabled(request, reply, true));
