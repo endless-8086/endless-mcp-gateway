@@ -53,7 +53,7 @@ export const config = {
   nodeEnv: nodeEnvironment,
   host: setting('HOST', httpConfig.host, '0.0.0.0'),
   port: numberSetting('PORT', httpConfig.port, 8080),
-  databaseUrl: setting('DATABASE_URL', databaseConfig.url ?? fileConfig.databaseUrl, 'postgres://mcp_gateway:mcp_gateway@localhost:5432/mcp_gateway'),
+  databaseUrl: setting('DATABASE_URL', databaseConfig.url ?? fileConfig.databaseUrl, 'postgres://mcp_gateway:mcp_gateway@localhost:5432/mcp-gateway'),
   dbPoolMax: numberSetting('DB_POOL_MAX', databaseConfig.poolMax, 20),
   dbIdleTimeoutMs: numberSetting('DB_IDLE_TIMEOUT_MS', databaseConfig.idleTimeoutMs, 30_000),
   dbConnectionTimeoutMs: numberSetting('DB_CONNECTION_TIMEOUT_MS', databaseConfig.connectionTimeoutMs, 5_000),
