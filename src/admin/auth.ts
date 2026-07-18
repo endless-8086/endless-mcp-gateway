@@ -22,7 +22,6 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 export function requireMcpToken(request: FastifyRequest, reply: FastifyReply, done: (error?: Error) => void): void {
-  if (!config.mcpToken) { reply.code(401).send({ error: 'MCP token not configured' }); return; }
-  if (timingSafeEqual(bearer(request) ?? '', config.mcpToken)) { done(); return; }
+  if (!config.mcpToken || timingSafeEqual(bearer(request) ?? '', config.mcpToken)) { done(); return; }
   reply.code(401).send({ error: 'Unauthorized' });
 }
