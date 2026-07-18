@@ -132,11 +132,11 @@ function renderTools() {
   const filtered = state.tools;
   const tagSelect = $('#tool-tag-filter');
   const currentTag = tagSelect.value;
-  tagSelect.innerHTML = '<option value="">${__('filter_all_tags')}</option>' + state.tags.filter((item) => item.enabled).map((item) => `<option value="${esc(item.name)}">${esc(item.displayName || item.name)}</option>`).join('');
+  tagSelect.innerHTML = `<option value="">${__('filter_all_tags')}</option>` + state.tags.filter((item) => item.enabled).map((item) => `<option value="${esc(item.name)}">${esc(item.displayName || item.name)}</option>`).join('');
   tagSelect.value = currentTag;
   const serverSelect = $('#tool-server-filter');
   const currentServer = serverSelect.value;
-  serverSelect.innerHTML = '<option value="">${__('filter_all_servers')}</option>' + state.servers.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('');
+  serverSelect.innerHTML = `<option value="">${__('filter_all_servers')}</option>` + state.servers.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('');
   serverSelect.value = currentServer;
   if (!filtered.length) { $('#tools-table').innerHTML = `<div class="empty-state"><strong>${__('tools_empty_title')}</strong>${__('tools_empty_desc')}</div>`; return; }
   const from = state.toolTotal ? (state.toolPage - 1) * state.toolPageSize + 1 : 0;
