@@ -39,6 +39,7 @@ export async function createApp() {
     '/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
     '/styles.css': { file: 'styles.css', type: 'text/css; charset=utf-8' },
     '/app.js': { file: 'app.js', type: 'text/javascript; charset=utf-8' },
+    '/i18n.js': { file: 'i18n.js', type: 'text/javascript; charset=utf-8' },
     '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' }
   };
   for (const [route, asset] of Object.entries(staticAssets)) {
