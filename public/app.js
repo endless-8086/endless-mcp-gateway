@@ -209,8 +209,10 @@ async function handleToolAction(action, serverId, toolName) {
   if (!tool) return;
   try {
     if (action === 'edit') { toolDialog(tool); return; }
-    await api(`/api/v1/servers/${encodeURIComponent(serverId)}/tools/${encodeURIComponent(toolName)}`, { method: 'PUT', body: JSON.stringify({ enabled: !tool.enabled, version: tool.version }) });
-    await loadAll();
+    const updated = await api(`/api/v1/servers/${encodeURIComponent(serverId)}/tools/${encodeURIComponent(toolName)}`, { method: 'PUT', body: JSON.stringify({ enabled: !tool.enabled, version: tool.version }) });
+    const idx = state.tools.findIndex(t => t.serverId === serverId && t.upstreamName === toolName);
+    if (idx >= 0 && updated) state.tools[idx] = { ...state.tools[idx], ...updated };
+    renderAll();
   } catch (error) { toast(error.message, true); }
 }
 

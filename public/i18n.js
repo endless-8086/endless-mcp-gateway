@@ -365,9 +365,10 @@
 
   // DOMContentLoaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyToDOM);
+    document.addEventListener('DOMContentLoaded', function() { applyToDOM(); initSwitcher(); });
   } else {
     applyToDOM();
+    initSwitcher();
   }
   function initSwitcher() {
     var sel = document.getElementById("lang-switch");
