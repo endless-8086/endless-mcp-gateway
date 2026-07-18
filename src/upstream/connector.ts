@@ -59,6 +59,10 @@ export class McpClientConnector implements UpstreamConnector {
   private lastConnectedAt?: string;
   private readonly lifecycle = new AsyncMutex();
   private readonly semaphore: Semaphore;
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private reconnectAttempt = 0;
+  private static readonly MAX_RECONNECT = 10;
+  private static readonly RECONNECT_BASE_MS = 1000;
 
   constructor(
     public readonly serverId: string,
@@ -86,6 +90,7 @@ export class McpClientConnector implements UpstreamConnector {
             this.client = null;
             this.state = 'FAILED';
             this.lastError = 'UPSTREAM_TRANSPORT_CLOSED';
+            this.scheduleReconnect();
           }
         };
         observedTransport.onerror = (error) => {
@@ -95,6 +100,7 @@ export class McpClientConnector implements UpstreamConnector {
         this.state = 'READY';
         this.lastError = undefined;
         this.lastConnectedAt = new Date().toISOString();
+        this.clearReconnect();
       } catch (error) {
         this.state = 'FAILED';
         this.lastError = error instanceof Error ? error.message : String(error);
@@ -102,6 +108,24 @@ export class McpClientConnector implements UpstreamConnector {
         throw error;
       }
     });
+  }
+
+  private buildStdioEnv(): Record<string, string> {
+    // Only pass whitelisted system vars to subprocesses — not the full process.env
+    const allowPrefixes = ['PATH', 'HOME', 'USER', 'LANG', 'TMP', 'SHELL', 'NODE_', 'CODEX_', 'OPENAI_', 'GEMINI_', 'ANTHROPIC_'];
+    const env: Record<string, string> = {};
+    for (const key of Object.keys(process.env)) {
+      const value = process.env[key];
+      if (value === undefined) continue;
+      if (allowPrefixes.some((prefix) => key.startsWith(prefix))) {
+        env[key] = value;
+      }
+    }
+    // Server-configured env vars always win
+    if (this.server.env) {
+      Object.assign(env, this.server.env);
+    }
+    return env;
   }
 
   private createTransport(): unknown {
@@ -112,7 +136,7 @@ export class McpClientConnector implements UpstreamConnector {
         command: server.command,
         args: server.args ?? [],
         cwd: server.cwd,
-        env: Object.fromEntries(Object.entries({ ...process.env, ...(server.env ?? {}) }).filter(([, value]) => value !== undefined)) as Record<string, string>
+        env: this.buildStdioEnv()
       });
     }
     if (!server.url) throw new Error(`remote server ${server.id} has no url`);
@@ -123,9 +147,31 @@ export class McpClientConnector implements UpstreamConnector {
     return new SSEClientTransport(url, { requestInit: { headers }, eventSourceInit: { headers } } as never);
   }
 
+  private scheduleReconnect(): void {
+    if (this.reconnectAttempt >= McpClientConnector.MAX_RECONNECT) {
+      this.lastError = `UPSTREAM_TRANSPORT_CLOSED (max ${McpClientConnector.MAX_RECONNECT} reconnect attempts exhausted)`;
+      return;
+    }
+    const delay = Math.min(McpClientConnector.RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt), 60_000);
+    this.reconnectAttempt += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      this.connect().catch(() => undefined);
+    }, delay);
+  }
+
+  private clearReconnect(): void {
+    this.reconnectAttempt = 0;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+  }
+
   async close(): Promise<void> {
     await this.lifecycle.runExclusive(async () => {
       this.state = 'STOPPING';
+      this.clearReconnect();
       const client = this.client;
       this.client = null;
       this.transport = null;

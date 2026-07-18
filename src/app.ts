@@ -14,7 +14,7 @@ import { requireMcpToken } from './admin/auth.js';
 
 export async function createApp() {
   const app = Fastify({ logger: { level: config.logLevel }, bodyLimit: config.maxBodyBytes, requestIdHeader: 'x-request-id' });
-  const db = new Database();
+  const db = new Database(app.log);
   const repo = new GatewayRepository(db);
   const manager = new UpstreamManager(repo, db, app.log);
   const endpoint = new GatewayMcpEndpoint(manager, repo, app.log);
@@ -31,7 +31,10 @@ export async function createApp() {
       }
     }
   });
-  await app.register(cors, { origin: true, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] });
+  const corsOrigin = config.nodeEnv === 'production'
+    ? (process.env.MCP_GATEWAY_CORS_ORIGIN || false)
+    : true;
+  await app.register(cors, { origin: corsOrigin, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] });
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   const publicRoot = path.resolve(process.cwd(), 'public');
   const staticAssets: Record<string, { file: string; type: string }> = {

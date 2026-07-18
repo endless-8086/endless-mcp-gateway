@@ -47,6 +47,14 @@ function listSetting(name: string, fileValue: unknown): string[] {
 }
 
 const nodeEnvironment = setting('NODE_ENV', fileConfig.nodeEnv, 'development');
+const adminToken = setting('ADMIN_TOKEN', securityConfig.adminToken, '');
+const mcpToken = setting('MCP_TOKEN', securityConfig.mcpToken, '');
+
+// Production safety: refuse to start with empty admin token in production.
+// Set MCP_GATEWAY_ALLOW_EMPTY_TOKEN=true to override (NOT recommended).
+if (nodeEnvironment === 'production' && !adminToken && process.env.MCP_GATEWAY_ALLOW_EMPTY_TOKEN !== 'true') {
+  throw new Error('ADMIN_TOKEN must be set in production mode. Set MCP_GATEWAY_ALLOW_EMPTY_TOKEN=true to override.');
+}
 
 export const config = {
   configFile: process.env.MCP_GATEWAY_CONFIG ?? path.resolve(process.cwd(), 'config/gateway.json'),
@@ -58,12 +66,12 @@ export const config = {
   dbIdleTimeoutMs: numberSetting('DB_IDLE_TIMEOUT_MS', databaseConfig.idleTimeoutMs, 30_000),
   dbConnectionTimeoutMs: numberSetting('DB_CONNECTION_TIMEOUT_MS', databaseConfig.connectionTimeoutMs, 5_000),
   dbMaxUses: numberSetting('DB_MAX_USES', databaseConfig.maxUses, 0),
-  adminToken: setting('ADMIN_TOKEN', securityConfig.adminToken, ''),
-  mcpToken: setting('MCP_TOKEN', securityConfig.mcpToken, ''),
+  adminToken,
+  mcpToken,
   upgradeInsecureRequests: booleanSetting('UPGRADE_INSECURE_REQUESTS', securityConfig.upgradeInsecureRequests, false),
   logLevel: setting('LOG_LEVEL', runtimeConfig.logLevel, 'info'),
   refreshIntervalMs: numberSetting('TOOL_REFRESH_INTERVAL_MS', runtimeConfig.refreshIntervalMs, 60_000),
-  defaultCallTimeoutMs: numberSetting('DEFAULT_CALL_TIMEOUT_MS', runtimeConfig.defaultCallTimeoutMs, 30_000),
+  defaultCallTimeoutMs: numberSetting('DEFAULT_CALL_TIMEOUT_MS', runtimeConfig.defaultCallTimeoutMs, 300_000),
   maxBodyBytes: numberSetting('MAX_BODY_BYTES', runtimeConfig.maxBodyBytes, 1_048_576),
   maxToolConcurrency: numberSetting('MAX_TOOL_CONCURRENCY', runtimeConfig.maxToolConcurrency, 8),
   maxRestarts: numberSetting('MAX_UPSTREAM_RESTARTS', runtimeConfig.maxRestarts, 10),

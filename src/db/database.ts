@@ -13,6 +13,12 @@ export class Database {
     maxUses: config.dbMaxUses || undefined
   });
 
+  constructor(private readonly logger?: { error: (...args: unknown[]) => void }) {
+    this.pool.on('error', (err) => {
+      this.logger?.error({ err }, 'pg pool unexpected error');
+    });
+  }
+
   async query<T extends QueryResultRow = QueryResultRow>(text: string, values: unknown[] = []): Promise<QueryResult<T>> {
     return this.pool.query<T>(text, values);
   }

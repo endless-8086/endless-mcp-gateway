@@ -16,7 +16,9 @@ export class UpstreamManager {
   async start(): Promise<void> {
     const servers = await this.repo.listServers();
     for (const server of servers) {
-      if (server.enabled) void this.ensureConnected(server).catch((error) => this.logger.warn({ err: error, serverId: server.id }, 'upstream connect failed'));
+      if (server.enabled) {
+        this.ensureConnected(server).catch((error) => this.logger.warn({ err: error, serverId: server.id }, 'upstream connect failed'));
+      }
     }
     this.refreshTimer = setInterval(() => void this.refreshAll(), config.refreshIntervalMs);
     this.refreshTimer.unref();

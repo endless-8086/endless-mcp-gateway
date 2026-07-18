@@ -15,6 +15,5 @@ RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
 COPY migrations ./migrations
 COPY config/gateway.example.json ./config/gateway.example.json
-COPY README.md ./README.md
 EXPOSE 8080
 CMD ["node", "dist/main.js"]
