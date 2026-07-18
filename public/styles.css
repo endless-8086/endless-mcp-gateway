@@ -194,3 +194,19 @@ body.light .modal-form { padding: 22px; }
   #view-tools #tools-table { display: block; overflow: visible; }
   #view-tools #tools-table .table-scroll { overflow-x: auto; overflow-y: visible; }
 }
+
+/* Language switcher */
+.lang-switch {
+  background: var(--panel-soft);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: .82rem;
+  cursor: pointer;
+  outline: none;
+}
+.lang-switch:focus-visible {
+  outline: 2px solid rgba(73, 214, 208, .72);
+  outline-offset: 2px;
+}

@@ -15,36 +15,40 @@
           <div class="brand-mark">∞</div>
           <div>
             <strong>Endless</strong>
-            <span>MCP Gateway</span>
+            <span data-i18n="brand_sub">MCP Gateway</span>
           </div>
         </div>
         <nav class="nav-list" aria-label="主导航">
-          <button class="nav-item active" data-view="overview"><span>◈</span>总览</button>
-          <button class="nav-item" data-view="servers"><span>◉</span>上游服务</button>
-          <button class="nav-item" data-view="tools"><span>◇</span>工具目录</button>
-          <button class="nav-item" data-view="tags"><span>#</span>标签管理</button>
+          <button class="nav-item active" data-view="overview"><span>◈</span><span data-i18n="nav_overview">总览</span></button>
+          <button class="nav-item" data-view="servers"><span>◉</span><span data-i18n="nav_servers">上游服务</span></button>
+          <button class="nav-item" data-view="tools"><span>◇</span><span data-i18n="nav_tools">工具目录</span></button>
+          <button class="nav-item" data-view="tags"><span>#</span><span data-i18n="nav_tags">标签管理</span></button>
         </nav>
         <div class="sidebar-footer">
           <span class="status-dot"></span>
-          <span>控制面已连接</span>
-          <button id="theme-toggle" class="icon-button" title="切换主题" aria-label="切换主题">☼</button>
+          <span data-i18n="connected">控制面已连接</span>
+          <button id="theme-toggle" class="icon-button" data-i18n-mode="title" data-i18n="theme_toggle" title="切换主题" aria-label="切换主题">☼</button>
         </div>
       </aside>
 
       <main class="main-content">
         <header class="topbar">
           <div>
-            <p class="eyebrow">CONTROL PLANE</p>
-            <h1 id="page-title">网关总览</h1>
+            <p class="eyebrow" data-i18n="control_plane">CONTROL PLANE</p>
+            <h1 id="page-title" data-i18n="page_overview">网关总览</h1>
           </div>
           <div class="topbar-actions">
             <div class="token-field">
-              <label for="token-input">管理令牌</label>
-              <input id="token-input" type="password" placeholder="ADMIN_TOKEN" autocomplete="off" />
-              <button id="save-token" class="button button-ghost">保存</button>
+              <label for="token-input" data-i18n="token_label">管理令牌</label>
+              <input id="token-input" type="password" data-i18n-mode="placeholder" data-i18n="token_placeholder" placeholder="ADMIN_TOKEN" autocomplete="off" />
+              <button id="save-token" class="button button-ghost" data-i18n="token_save">保存</button>
             </div>
-            <button id="refresh-all" class="button button-ghost">刷新数据</button>
-            <a class="button button-primary" href="/mcp" target="_blank" rel="noreferrer">打开 MCP</a>
+            <select id="lang-switch" class="lang-switch" aria-label="Language">
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+            </select>
+            <button id="refresh-all" class="button button-ghost" data-i18n="refresh_data">刷新数据</button>
+            <a class="button button-primary" href="/mcp" target="_blank" rel="noreferrer" data-i18n="open_mcp">打开 MCP</a>
           </div>
         </header>
 
@@ -54,44 +58,46 @@
           <div class="hero-card">
             <div>
               <p class="eyebrow">STREAMABLE HTTP GATEWAY</p>
-              <h2>让每一个工具，都能被安全地组合。</h2>
-              <p class="muted">统一接入 stdio、SSE 与 Streamable HTTP 上游，按服务和标签分发工具。</p>
+              <h2 data-i18n="hero_title">让每一个工具，都能被安全地组合。</h2>
+              <p class="muted" data-i18n="hero_sub">统一接入 stdio、SSE 与 Streamable HTTP 上游，按服务和标签分发工具。</p>
             </div>
             <div class="hero-orbit"><span></span><span></span><span></span><b>∞</b></div>
           </div>
           <div class="metric-grid">
-            <article class="metric-card"><span class="metric-label">上游服务</span><strong id="metric-servers">—</strong><small id="metric-servers-sub">加载中</small></article>
-            <article class="metric-card"><span class="metric-label">可用工具</span><strong id="metric-tools">—</strong><small id="metric-tools-sub">加载中</small></article>
-            <article class="metric-card"><span class="metric-label">标签</span><strong id="metric-tags">—</strong><small>工具分组</small></article>
-            <article class="metric-card accent"><span class="metric-label">MCP Endpoint</span><strong>3</strong><small>/mcp · /servers · /tags</small></article>
+            <article class="metric-card"><span class="metric-label" data-i18n="metric_servers">上游服务</span><strong id="metric-servers">—</strong><small id="metric-servers-sub">加载中</small></article>
+            <article class="metric-card"><span class="metric-label" data-i18n="metric_tools">可用工具</span><strong id="metric-tools">—</strong><small id="metric-tools-sub">加载中</small></article>
+            <article class="metric-card"><span class="metric-label" data-i18n="metric_tags">标签</span><strong id="metric-tags">—</strong><small data-i18n="metric_sub_tags">工具分组</small></article>
+            <article class="metric-card accent"><span class="metric-label" data-i18n="metric_endpoint">MCP Endpoint</span><strong>3</strong><small data-i18n="metric_sub_endpoint">/mcp · /servers · /tags</small></article>
           </div>
-          <div class="section-heading"><div><p class="eyebrow">RUNTIME</p><h3>运行中的上游</h3></div><button class="text-button" data-view-target="servers">查看全部 →</button></div>
+          <div class="section-heading"><div><p class="eyebrow" data-i18n="runtime">RUNTIME</p><h3 data-i18n="runtime_heading">运行中的上游</h3></div><button class="text-button" data-view-target="servers" data-i18n="view_all">查看全部 →</button></div>
           <div id="overview-servers" class="server-preview"></div>
         </section>
 
         <section id="view-servers" class="view">
-          <div class="section-heading page-section-heading"><div><p class="eyebrow">UPSTREAMS</p><h2>上游服务</h2><p class="muted">管理连接、刷新工具并控制服务是否出现在网关中。</p></div><button id="add-server" class="button button-primary">＋ 添加服务</button></div>
-          <div class="toolbar"><div class="search-box"><span>⌕</span><input id="server-search" placeholder="搜索服务名称或 ID" /></div><div class="filter-pills" id="server-filters"><button class="filter-pill active" data-server-filter="all">全部</button><button class="filter-pill" data-server-filter="ready">运行中</button><button class="filter-pill" data-server-filter="disabled">已停用</button></div></div>
+          <div class="section-heading page-section-heading"><div><p class="eyebrow" data-i18n="upstreams">UPSTREAMS</p><h2 data-i18n="servers_heading">上游服务</h2><p class="muted" data-i18n="servers_desc">管理连接、刷新工具并控制服务是否出现在网关中。</p></div><button id="add-server" class="button button-primary" data-i18n="add_server">＋ 添加服务</button></div>
+          <div class="toolbar"><div class="search-box"><span>⌕</span><input id="server-search" data-i18n-mode="placeholder" data-i18n="search_servers" placeholder="搜索服务名称或 ID" /></div><div class="filter-pills" id="server-filters"><button class="filter-pill active" data-server-filter="all" data-i18n="filter_all">全部</button><button class="filter-pill" data-server-filter="ready" data-i18n="filter_ready">运行中</button><button class="filter-pill" data-server-filter="disabled" data-i18n="filter_disabled">已停用</button></div></div>
           <div id="servers-table" class="data-card table-card"></div>
         </section>
 
         <section id="view-tools" class="view">
-          <div class="section-heading page-section-heading"><div><p class="eyebrow">TOOL CATALOG</p><h2>工具目录</h2><p class="muted">查看所有上游工具，编辑描述、并发和标签。</p></div><button id="refresh-tools" class="button button-primary">↻ 刷新工具</button></div>
-          <div class="toolbar"><div class="search-box"><span>⌕</span><input id="tool-search" placeholder="搜索工具名称、描述或服务" /></div><select id="tool-tag-filter" class="select-control"><option value="">所有标签</option></select><select id="tool-server-filter" class="select-control"><option value="">所有服务</option></select></div>
+          <div class="section-heading page-section-heading"><div><p class="eyebrow" data-i18n="tool_catalog">TOOL CATALOG</p><h2 data-i18n="tools_heading">工具目录</h2><p class="muted" data-i18n="tools_desc">查看所有上游工具，编辑描述、并发和标签。</p></div><button id="refresh-tools" class="button button-primary" data-i18n="refresh_tools">↻ 刷新工具</button></div>
+          <div class="toolbar"><div class="search-box"><span>⌕</span><input id="tool-search" data-i18n-mode="placeholder" data-i18n="search_tools" placeholder="搜索工具名称、描述或服务" /></div><select id="tool-tag-filter" class="select-control"><option value="" data-i18n="filter_all_tags">所有标签</option></select><select id="tool-server-filter" class="select-control"><option value="" data-i18n="filter_all_servers">所有服务</option></select></div>
           <div id="tools-table" class="data-card table-card"></div>
         </section>
 
         <section id="view-tags" class="view">
-          <div class="section-heading page-section-heading"><div><p class="eyebrow">TAXONOMY</p><h2>标签管理</h2><p class="muted">用标签创建面向不同场景的 MCP 工具集合。</p></div></div>
-          <div class="tag-layout"><div class="data-card tag-create-card"><p class="eyebrow">NEW TAG</p><h3>创建标签</h3><form id="tag-form"><label>标签名称<input name="name" required pattern="[a-zA-Z0-9:_-]+" placeholder="例如 database" /></label><label>展示名称<input name="displayName" placeholder="例如 数据库" /></label><label>描述<textarea name="description" rows="3" placeholder="这个标签用于什么场景？"></textarea></label><button class="button button-primary" type="submit">创建标签</button></form></div><div><div class="tag-summary" id="tag-summary"></div><div id="tags-grid" class="tags-grid"></div></div></div>
+          <div class="section-heading page-section-heading"><div><p class="eyebrow" data-i18n="taxonomy">TAXONOMY</p><h2 data-i18n="tags_heading">标签管理</h2><p class="muted" data-i18n="tags_desc">用标签创建面向不同场景的 MCP 工具集合。</p></div></div>
+          <div class="tag-layout"><div class="data-card tag-create-card"><p class="eyebrow" data-i18n="new_tag">NEW TAG</p><h3 data-i18n="tags_new_heading" data-i18n="tags_create_btn">创建标签</h3><form id="tag-form"><label data-i18n="tags_name">标签名称<input name="name" required pattern="[a-zA-Z0-9:_-]+" data-i18n-mode="placeholder" data-i18n="tags_name_placeholder" placeholder="例如 database" /></label><label data-i18n="tags_display_name" data-i18n="dialog_tool_name">展示名称<input name="displayName" data-i18n-mode="placeholder" data-i18n="tags_display_name_placeholder" placeholder="例如 数据库" /></label><label data-i18n="tags_description">描述<textarea name="description" rows="3" data-i18n-mode="placeholder" data-i18n="tags_description_placeholder" placeholder="这个标签用于什么场景？"></textarea></label><button class="button button-primary" type="submit" data-i18n="tags_create_btn">创建标签</button></form></div><div><div class="tag-summary" id="tag-summary"></div><div id="tags-grid" class="tags-grid"></div></div></div>
         </section>
       </main>
     </div>
 
-    <dialog id="server-dialog" class="modal-dialog"><form method="dialog" id="server-form" class="modal-form"><div class="modal-header"><div><p class="eyebrow">UPSTREAM CONFIG</p><h3 id="server-dialog-title">添加上游服务</h3></div><button type="button" class="close-button" data-close-dialog="server-dialog" aria-label="关闭">×</button></div><div class="form-grid"><label>服务 ID<input name="id" required pattern="[a-zA-Z0-9_-]+" placeholder="filesystem" /></label><label>名称<input name="name" required placeholder="Filesystem MCP" /></label><label>类型<select name="type" required><option value="stdio">stdio</option><option value="streamable-http">Streamable HTTP</option><option value="sse">SSE</option></select></label><label>启用<select name="enabled"><option value="true">启用</option><option value="false">停用</option></select></label><label class="full conditional-stdio">Command<input name="command" placeholder="npx" /></label><label class="full conditional-stdio">Args（JSON 数组）<input name="args" placeholder='["-y", "@modelcontextprotocol/server-filesystem", "D:/data"]' /></label><label class="full conditional-stdio">工作目录<input name="cwd" placeholder="D:/mcp" /></label><label class="full conditional-remote">URL<input name="url" type="url" placeholder="https://example.com/mcp" /></label><label class="full conditional-remote">Headers（JSON 对象）<textarea name="headers" rows="3" placeholder='{"Authorization":"Bearer ..."}'></textarea></label></div><p class="form-hint">敏感 Header 建议使用环境变量或 Secret Manager，不要直接保存在浏览器。</p><div class="modal-actions"><button type="button" class="button button-ghost" data-close-dialog="server-dialog">取消</button><button type="submit" class="button button-primary">保存服务</button></div></form></dialog>
+    <dialog id="server-dialog" class="modal-dialog"><form method="dialog" id="server-form" class="modal-form"><div class="modal-header"><div><p class="eyebrow" data-i18n="upstream_config">UPSTREAM CONFIG</p><h3 id="server-dialog-title" data-i18n="dialog_add_server">添加上游服务</h3></div><button type="button" class="close-button" data-close-dialog="server-dialog" aria-label="关闭">×</button></div><div class="form-grid"><label><span data-i18n="server_id">服务 ID</span><input name="id" required pattern="[a-zA-Z0-9_-]+" placeholder="filesystem" /></label><label><span data-i18n="server_name">名称</span><input name="name" required placeholder="Filesystem MCP" /></label><label><span data-i18n="server_type">类型</span><select name="type" required><option value="stdio">stdio</option><option value="streamable-http">Streamable HTTP</option><option value="sse">SSE</option></select></label><label><span data-i18n="server_enabled">启用</span><select name="enabled"><option value="true" data-i18n="enabled">启用</option><option value="false" data-i18n="disabled">停用</option></select></label><label class="full conditional-stdio"><span data-i18n="server_command">Command</span><input name="command" placeholder="npx" /></label><label class="full conditional-stdio">Args（JSON 数组）<input name="args" data-i18n-mode="placeholder" data-i18n="server_args" placeholder='["-y", "@modelcontextprotocol/server-filesystem", "D:/data"]' /></label><label class="full conditional-stdio"><span data-i18n="server_cwd">工作目录</span><input name="cwd" placeholder="D:/mcp" /></label><label class="full conditional-remote"><span data-i18n="server_url">URL</span><input name="url" type="url" placeholder="https://example.com/mcp" /></label><label class="full conditional-remote"><span data-i18n="server_headers">Headers（JSON 对象）<textarea name="headers" rows="3" placeholder='{"Authorization":"Bearer ..."}'></textarea></label></div><p class="form-hint" data-i18n="dialog_form_hint">敏感 Header 建议使用环境变量或 Secret Manager，不要直接保存在浏览器。</p><div class="modal-actions"><button type="button" class="button button-ghost" data-close-dialog="server-dialog" data-i18n="dialog_cancel">取消</button><button type="submit" class="button button-primary" data-i18n="dialog_save_server">保存服务</button></div></form></dialog>
 
-    <dialog id="tool-dialog" class="modal-dialog"><form method="dialog" id="tool-form" class="modal-form"><div class="modal-header"><div><p class="eyebrow">TOOL METADATA</p><h3>编辑工具</h3><p class="muted" id="tool-dialog-subtitle"></p></div><button type="button" class="close-button" data-close-dialog="tool-dialog" aria-label="关闭">×</button></div><div class="form-grid"><label>展示名称<input name="displayName" placeholder="可选的中文名称" /></label><label>调用超时（ms）<input name="timeoutMs" type="number" min="100" max="3600000" placeholder="30000" /></label><label class="full">描述覆盖<textarea name="descriptionOverride" rows="3" placeholder="留空则使用上游描述"></textarea></label><label class="full">单工具并发上限<input name="concurrencyLimit" type="number" min="1" max="1000" placeholder="使用服务默认值" /></label></div><div><p class="eyebrow">TAGS</p><div id="tool-tag-options" class="tag-options"></div></div><div class="modal-actions"><button type="button" class="button button-ghost" data-close-dialog="tool-dialog">取消</button><button type="submit" class="button button-primary">保存工具</button></div></form></dialog>
+    <dialog id="tool-dialog" class="modal-dialog"><form method="dialog" id="tool-form" class="modal-form"><div class="modal-header"><div><p class="eyebrow" data-i18n="tool_metadata">TOOL METADATA</p><h3 data-i18n="dialog_tool_title">编辑工具</h3><p class="muted" id="tool-dialog-subtitle"></p></div><button type="button" class="close-button" data-close-dialog="tool-dialog" aria-label="关闭">×</button></div><div class="form-grid"><label data-i18n="tags_display_name" data-i18n="dialog_tool_name">展示名称<input name="displayName" data-i18n-mode="placeholder" data-i18n="dialog_tool_name_placeholder" placeholder="可选的中文名称" /></label><label data-i18n="dialog_tool_timeout">调用超时（ms）<input name="timeoutMs" type="number" min="100" max="3600000" placeholder="30000" /></label><label class="full" data-i18n="dialog_tool_desc_override">描述覆盖<textarea name="descriptionOverride" rows="3" data-i18n-mode="placeholder" data-i18n="dialog_tool_desc_placeholder" placeholder="留空则使用上游描述"></textarea></label><label class="full" data-i18n="dialog_tool_concurrency">单工具并发上限<input name="concurrencyLimit" type="number" min="1" max="1000" data-i18n-mode="placeholder" data-i18n="dialog_tool_concurrency_placeholder" placeholder="使用服务默认值" /></label></div><div><p class="eyebrow" data-i18n="dialog_tool_tags">TAGS</p><div id="tool-tag-options" class="tag-options"></div></div><div class="modal-actions"><button type="button" class="button button-ghost" data-close-dialog="tool-dialog" data-i18n="dialog_cancel">取消</button><button type="submit" class="button button-primary" data-i18n="dialog_save_tool">保存工具</button></div></form></dialog>
 
+    <script src="/i18n.js"></script>
     <script type="module" src="/app.js"></script>
-  </body>
+  <script>document.getElementById("lang-switch").value=window.i18n?window.i18n.lang:(navigator.language||"en").startsWith("zh")?"zh":"en";document.getElementById("lang-switch").addEventListener("change",function(e){window.i18n&&window.i18n.setLanguage(e.target.value)})</script>
+</body>
 </html>
