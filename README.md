@@ -3,6 +3,8 @@
 A gateway that aggregates stdio, SSE, and Streamable HTTP upstream MCP servers into a single Streamable HTTP MCP endpoint.
 
 Core protocol support uses the official [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/sdk), with PostgreSQL 18 for configuration and operational auditing.
+> [中文文档](README_CN.md)
+
 
 ## Features
 

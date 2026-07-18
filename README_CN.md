@@ -3,6 +3,8 @@
 一个将 stdio、SSE 和 Streamable HTTP 上游 MCP 服务统一聚合并暴露为 Streamable HTTP MCP Endpoint 的网关。
 
 核心协议能力使用官方 `@modelcontextprotocol/sdk`，配置和运行审计使用 PostgreSQL 18。
+> [English README](README.md)
+
 
 ## 能力
 
