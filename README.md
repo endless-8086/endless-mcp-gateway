@@ -180,7 +180,7 @@ MCP clients can configure `http://localhost:8080/mcp` directly as a Streamable H
 | `ADMIN_TOKEN` | *empty* | Admin API Bearer token; **must be set in production** |
 | `MCP_TOKEN` | *empty* | MCP data-plane Bearer token |
 | `TOOL_REFRESH_INTERVAL_MS` | `60000` | Auto-refresh upstream tool lists |
-| `DEFAULT_CALL_TIMEOUT_MS` | `30000` | Default tool call timeout |
+| `DEFAULT_CALL_TIMEOUT_MS` | `1800000` | Default tool call timeout (30 minutes) |
 | `MAX_TOOL_CONCURRENCY` | `8` | Default concurrency per upstream |
 | `MAX_BODY_BYTES` | `1048576` | Maximum HTTP request body size |
 | `ALLOWED_STDIO_COMMANDS` | *empty* | Comma-separated stdio executable allowlist |

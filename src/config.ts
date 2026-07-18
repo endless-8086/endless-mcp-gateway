@@ -71,7 +71,7 @@ export const config = {
   upgradeInsecureRequests: booleanSetting('UPGRADE_INSECURE_REQUESTS', securityConfig.upgradeInsecureRequests, false),
   logLevel: setting('LOG_LEVEL', runtimeConfig.logLevel, 'info'),
   refreshIntervalMs: numberSetting('TOOL_REFRESH_INTERVAL_MS', runtimeConfig.refreshIntervalMs, 60_000),
-  defaultCallTimeoutMs: numberSetting('DEFAULT_CALL_TIMEOUT_MS', runtimeConfig.defaultCallTimeoutMs, 300_000),
+  defaultCallTimeoutMs: numberSetting('DEFAULT_CALL_TIMEOUT_MS', runtimeConfig.defaultCallTimeoutMs, 1_800_000),
   maxBodyBytes: numberSetting('MAX_BODY_BYTES', runtimeConfig.maxBodyBytes, 1_048_576),
   maxToolConcurrency: numberSetting('MAX_TOOL_CONCURRENCY', runtimeConfig.maxToolConcurrency, 8),
   maxRestarts: numberSetting('MAX_UPSTREAM_RESTARTS', runtimeConfig.maxRestarts, 10),

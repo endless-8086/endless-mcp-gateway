@@ -22,7 +22,7 @@
   "runtime": {
     "logLevel": "info",
     "refreshIntervalMs": 60000,
-    "defaultCallTimeoutMs": 30000,
+    "defaultCallTimeoutMs": 1800000,
     "maxBodyBytes": 1048576,
     "maxToolConcurrency": 8,
     "maxRestarts": 10,

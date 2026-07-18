@@ -39,3 +39,15 @@ test('stdio connector starts an isolated MCP process and proxies tools', async (
   assert.equal(connector.health().status, 'READY');
   await connector.close();
 });
+
+test('catalog refresh waits for an active tool call to finish', async () => {
+  const fixture = path.resolve('test/fixtures/stdio-mcp.mjs');
+  const connector = new McpClientConnector('fixture', { id: 'fixture', name: 'fixture', type: 'stdio', enabled: true, command: process.execPath, args: [fixture] }, { timeoutMs: 5000, maxConcurrency: 2 });
+  await connector.connect();
+  const inFlight = connector.callTool('echo', { text: 'hello', delayMs: 100 });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(await connector.tryListTools(), undefined);
+  await inFlight;
+  assert.equal((await connector.tryListTools())?.[0].name, 'echo');
+  await connector.close();
+});

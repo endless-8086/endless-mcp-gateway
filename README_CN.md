@@ -181,7 +181,7 @@ MCP 客户端可以直接把 `http://localhost:8080/mcp` 配置为 Streamable HT
 | `ADMIN_TOKEN` | 空 | 管理 API Bearer Token；生产必须设置 |
 | `MCP_TOKEN` | 空 | MCP 数据面 Bearer Token |
 | `TOOL_REFRESH_INTERVAL_MS` | `60000` | 自动刷新上游工具列表 |
-| `DEFAULT_CALL_TIMEOUT_MS` | `30000` | 默认工具调用超时 |
+| `DEFAULT_CALL_TIMEOUT_MS` | `1800000` | 默认工具调用超时（30 分钟） |
 | `MAX_TOOL_CONCURRENCY` | `8` | 单上游默认并发数 |
 | `MAX_BODY_BYTES` | `1048576` | HTTP 请求体上限 |
 | `ALLOWED_STDIO_COMMANDS` | 空 | 逗号分隔的 stdio 可执行文件白名单 |

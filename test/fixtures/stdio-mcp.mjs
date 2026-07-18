@@ -15,7 +15,10 @@ rl.on('line', (line) => {
   } else if (message.method === 'tools/list') {
     respond(message.id, { tools });
   } else if (message.method === 'tools/call') {
-    respond(message.id, { content: [{ type: 'text', text: String(message.params?.arguments?.text ?? '') }] });
+    const delayMs = Number(message.params?.arguments?.delayMs ?? 0);
+    setTimeout(() => {
+      respond(message.id, { content: [{ type: 'text', text: String(message.params?.arguments?.text ?? '') }] });
+    }, Math.max(0, delayMs));
   } else if (message.id !== undefined) {
     respond(message.id, {});
   }

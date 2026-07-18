@@ -24,7 +24,7 @@ function asMcpTool(tool: ToolMetadata) {
 export class GatewayMcpEndpoint {
   private readonly sessions = new Map<string, Session>();
 
-  constructor(private readonly manager: UpstreamManager, private readonly repo: GatewayRepository, private readonly logger: { debug: (...args: unknown[]) => void }) {}
+  constructor(private readonly manager: UpstreamManager, private readonly repo: GatewayRepository, private readonly logger: { debug: (...args: unknown[]) => void; warn: (...args: unknown[]) => void }) {}
 
   async register(app: FastifyInstance): Promise<void> {
     app.all('/mcp', async (request, reply) => this.handle(request, reply, {}));
@@ -41,8 +41,7 @@ export class GatewayMcpEndpoint {
     if (request.method === 'DELETE' && sessionId) {
       const session = this.sessions.get(sessionId)!;
       this.sessions.delete(sessionId);
-      reply.hijack();
-      await session.transport.handleRequest(request.raw as IncomingMessage, reply.raw as ServerResponse, request.body);
+      await this.handleTransportRequest(session.transport, request, reply, sessionId);
       await session.server.close().catch(() => undefined);
       return;
     }
@@ -60,13 +59,15 @@ export class GatewayMcpEndpoint {
         onsessioninitialized: (id: string) => {
           initializedId = id;
         },
-        onsessionclosed: (id: string) => { this.sessions.delete(id); }
+        onsessionclosed: (id: string) => {
+          this.sessions.delete(id);
+          this.logger.debug({ sessionId: id }, 'MCP downstream session closed');
+        }
       });
       await server.connect(transport);
       session = { server, transport, scope };
-      reply.hijack();
       try {
-        await transport.handleRequest(request.raw as IncomingMessage, reply.raw as ServerResponse, request.body);
+        await this.handleTransportRequest(transport, request, reply, sessionId);
         if (initializedId) this.sessions.set(initializedId, session);
       } catch (error) {
         await server.close().catch(() => undefined);
@@ -74,8 +75,37 @@ export class GatewayMcpEndpoint {
       }
       return;
     }
+    await this.handleTransportRequest(session.transport, request, reply, sessionId);
+  }
+
+  private async handleTransportRequest(
+    transport: StreamableHTTPServerTransport,
+    request: FastifyRequest,
+    reply: FastifyReply,
+    sessionId: string
+  ): Promise<void> {
+    const reportClosed = () => {
+      if (request.method !== 'POST' || reply.raw.writableEnded) return;
+      this.logger.warn({
+        requestId: request.id,
+        sessionId: sessionId || undefined,
+        method: request.method
+      }, 'MCP downstream HTTP request closed before a response was sent');
+    };
+    const reportAborted = () => this.logger.warn({
+      requestId: request.id,
+      sessionId: sessionId || undefined,
+      method: request.method
+    }, 'MCP downstream HTTP request aborted');
+    request.raw.once('aborted', reportAborted);
+    reply.raw.once('close', reportClosed);
     reply.hijack();
-    await session.transport.handleRequest(request.raw as IncomingMessage, reply.raw as ServerResponse, request.body);
+    try {
+      await transport.handleRequest(request.raw as IncomingMessage, reply.raw as ServerResponse, request.body);
+    } finally {
+      request.raw.off('aborted', reportAborted);
+      reply.raw.off('close', reportClosed);
+    }
   }
 
   private createServer(scope: Scope): Server {
@@ -90,8 +120,32 @@ export class GatewayMcpEndpoint {
       if (!tool || !tool.enabled) {
         throw new Error(`Tool not found or disabled: ${name}`);
       }
-      const result = await this.manager.callTool(tool, request.params.arguments ?? {}, extra.signal);
-      return result as never;
+      const callId = crypto.randomUUID();
+      const startedAt = Date.now();
+      const aborted = () => this.logger.warn({
+        callId,
+        sessionId: extra.sessionId,
+        requestId: extra.requestId,
+        serverId: tool.serverId,
+        toolName: tool.upstreamName,
+        durationMs: Date.now() - startedAt,
+        abortReason: String(extra.signal.reason ?? '')
+      }, 'MCP downstream tool call aborted');
+      extra.signal.addEventListener('abort', aborted, { once: true });
+      try {
+        const result = await this.manager.callTool(tool, request.params.arguments ?? {}, extra.signal);
+        this.logger.debug({
+          callId,
+          sessionId: extra.sessionId,
+          requestId: extra.requestId,
+          serverId: tool.serverId,
+          toolName: tool.upstreamName,
+          durationMs: Date.now() - startedAt
+        }, 'MCP downstream tool call completed');
+        return result as never;
+      } finally {
+        extra.signal.removeEventListener('abort', aborted);
+      }
     });
     return server;
   }
